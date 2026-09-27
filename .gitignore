@@ -1,0 +1,10 @@
+# OS / 编辑器
+.DS_Store
+Thumbs.db
+*.swp
+*~
+# 依赖（网页端零依赖，保险起见忽略）
+node_modules/
+# 本地临时
+*.log
+.cache/

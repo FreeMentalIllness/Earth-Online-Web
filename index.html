@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!-- v9：锁定缩放。手账风格排版按 CSS 像素设计，双指缩放会破坏固定底栏与卡片栅格 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f8f6f2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="地球Online">
+  <title>地球Online · 人生记录</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- 应用图标：自绘（icons/ 目录），零外部依赖。
+       PNG 声明在前、SVG 兜底 —— 多数打包器（含 Pakr）与 iOS 主屏只认 PNG，
+       SVG 虽矢量清晰，在这些场景里会静默回落到系统默认图标，表现为「图标没生效」。
+       注意 href 必须是**真实文件路径** —— QA 会抓取全部 href 并断言文件存在，
+       写 data URI 会直接 FAIL；引 CDN 则会撞上「无外部网络依赖」检查。 -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon.png">
+  <link rel="apple-touch-icon" href="icons/icon.png">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <!-- PWA 清单（放在根目录，start_url / scope 按本文件所在目录做相对解析） -->
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- v9：开屏遮罩。必须是 body 的第一个元素 —— 放在 #app 之前才能在首帧就盖住未渲染完的页面。
+       淡出由 app.js 在 initApp 收尾时触发；另配 CSS 兜底动画（6s 后自动隐藏），
+       万一脚本报错没跑到隐藏逻辑，也不会把界面永久挡死。 -->
+  <div id="splash">
+    <div class="splash-inner">
+      <!-- v1.2.1：换用真实应用图标 + 琥珀色光晕，与 Android 端开屏同一套语言 -->
+      <div class="splash-halo">
+        <img class="splash-logo" src="icons/icon.png" alt="地球Online">
+      </div>
+      <div class="splash-title">地球<span class="splash-title-sub">Online</span></div>
+      <div class="splash-sub">把人生当成一场开放世界游戏</div>
+      <div class="splash-bar"><i class="splash-bar-fill"></i></div>
+    </div>
+  </div>
+
+  <div id="app">
+
+    <!-- 左侧固定导航 -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-orb"></span>
+        <span class="logo-text">地球<small>Online</small></span>
+      </div>
+      <nav id="nav" class="nav"></nav>
+      <div class="quick-memo">
+        <div class="quick-memo-title">灵感闪念</div>
+        <input id="sidebarMemoInput" placeholder="回车即记录" maxlength="200">
+      </div>
+      <div class="sidebar-foot">地球Online · 本地存档</div>
+    </aside>
+
+    <!-- 右侧内容区 -->
+    <main id="content"></main>
+  </div>
+
+  <!-- v19：首次引导页挂载点（个人资料设置，原账号系统界面容器改造）。
+       独立于 #app 之外，显示时由 body.auth-active 隐藏侧栏与底栏，
+       避免「还没完成引导却看得到导航栏」的割裂感。 -->
+  <div id="auth-root"></div>
+
+  <!-- 模态层 / 提示层挂载点 -->
+  <div id="modal-root"></div>
+
+  <!-- v4：导入备份用的隐藏文件选择框（由「导入备份」按钮触发 click） -->
+  <input type="file" id="backupFileInput" accept="application/json,.json" hidden>
+  <!-- v8：收藏附件选择框（由「选择文件」按钮触发 click，持久化挂载避免 WebView/iOS 无法弹窗）
+       v15 批 C：扩展可上传类型 —— 图片/音乐/视频/PDF/文档/压缩包/exe/apk 等均可选 -->
+  <input type="file" id="collectionFileInput" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.exe,.apk,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/zip,application/octet-stream" hidden>
+
+  <!-- v4：移动端底部 Tab 栏（静态 HTML，≤768px 由媒体查询显示；切换仅切换 .active，不重建节点） -->
+  <!-- v15：底栏结构化为 图标 / 文字 / 选中圆点 三层，便于分别为图标与文字设置选中态，
+       并用 .tab-dot（4px 琥珀圆点）取代整块背景高亮作为选中指示。 -->
+  <nav id="tabbar" class="tabbar" aria-label="移动端导航">
+    <div class="tab-item active" data-page="home"><span class="tab-item-icon">🏠</span><span class="tab-item-label">主页</span><i class="tab-dot" aria-hidden="true"></i></div>
+    <div class="tab-item" data-page="tasks"><span class="tab-item-icon">📋</span><span class="tab-item-label">任务</span><i class="tab-dot" aria-hidden="true"></i></div>
+    <div class="tab-item" data-page="backpack"><span class="tab-item-icon">🎒</span><span class="tab-item-label">背包</span><i class="tab-dot" aria-hidden="true"></i></div>
+    <div class="tab-item" data-page="ai"><span class="tab-item-icon">🤖</span><span class="tab-item-label">系统</span><i class="tab-dot" aria-hidden="true"></i></div>
+  </nav>
+
+  <!-- v4：添加到主屏幕提示（仅在 http(s) 且支持离线运行时出现） -->
+  <div id="pwaTip" class="pwa-tip" hidden>
+    <span class="pwa-tip-text">📱 添加到主屏幕，随时记录人生</span>
+    <button class="pwa-tip-close" id="pwaTipClose" aria-label="关闭">×</button>
+  </div>
+
+  <!-- 高德地图 JS API（Key + 安全密钥均硬编码，无需用户配置）：
+       ① 安全密钥必须在 SDK 脚本加载前通过 window._AMapSecurityConfig 注入（AMap 2.0 读取带下划线的官方字段）；
+       ② 下方 <script src> 预加载 AMap，正常路径下 pages.js 的 ensureAMap 会命中已就绪的全局 AMap 而跳过重复注入；
+       ③ 离线 / Key 失效时地图自动降级为足迹列表，不影响其它功能。 -->
+  <script>window._AMapSecurityConfig = { securityJsCode: 'd4e92781da1ca5996c246d315af66031' };</script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=07672883965ec7a6f0948813c0a90915"></script>
+
+  <!-- v15 解耦批：轻量事件总线（模块间解耦，先于 storage/data 加载） -->
+  <script src="modules/bus.js"></script>
+
+  <!-- v16 ①：内置 localforage（离线优先，零外链）+ 存储层封装（EOStore / EarthIDB 别名） -->
+  <script src="vendor/localforage.min.js"></script>
+  <script src="modules/storage.js"></script>
+
+  <!-- v16 ②：按功能拆分的独立模块（window.EO 命名空间，经典脚本顺序加载，守住 file:// 双击可用） -->
+  <script src="modules/core.js"></script>
+  <script src="modules/achievements.js"></script>
+  <script src="modules/profile.js"></script>
+  <script src="modules/collections.js"></script>
+  <script src="modules/backup.js"></script>
+  <script src="modules/webdav.js"></script>
+  <script src="modules/stats.js"></script>
+  <script src="modules/account.js"></script>
+  <script src="modules/pages.js"></script>
+  <script src="modules/app.js"></script>
+</body>
+</html>
