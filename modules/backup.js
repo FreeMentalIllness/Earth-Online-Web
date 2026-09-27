@@ -80,6 +80,75 @@ function buildBackupPayload() {
 }
 
 /**
+ * WebDAV 同步专用载荷（Android 互通版）。
+ *
+ * 与 buildBackupPayload 的区别：在「信封格式」之外，额外在**顶层**镜像一份
+ * Android 端 BackupRepository.Payload 期望的裸字段（profile / tasks / memos /
+ * items / achievements / collections / locations / activities / version）。
+ *
+ * 为什么需要两份？
+ * - 本端（Web）读备份走 extractBackupState → 优先取 envelope.state，镜像字段被忽略；
+ * - Android 端用 kotlinx Json { ignoreUnknownKeys = true } 解析，会忽略 envelope 的
+ *   format/state/extra 等未知键，只读顶层的裸字段 —— 因此同一份文件两端都能解析。
+ *
+ * 字段对齐要点（与 Android 实体逐字段核对，见 earth-online-android 的 Entities.kt）：
+ * - profile：注入 birthDate（Web 是 state 顶级字段，Android 内嵌在 ProfileEntity）与 id=1；
+ *   不传 avatarPath / avatarData（Web 头像走 dataURL，与 Android「设备路径 + Base64 字节」模型不互通）；
+ *   自定义字段序列化成 customFieldsJson（两端 CustomField 均为 {id,label,value}）。
+ * - locations：tags 数组 → tagsJson（Android 用 JSON 字符串），删除 Web 专用的 tags 键。
+ * - 其余 tasks/memos/items/achievements/collections/activities 的字段名与 Android 实体一一对应
+ *   （task 的 sort_order 在 Android 单独存为 order，Web 不维护手动排序，属已知的单向字段）。
+ */
+function buildWebdavPayload() {
+  const s = state || {};
+  const prof = (s.profile && typeof s.profile === 'object') ? s.profile : {};
+  const birthDate = (typeof s.birthDate === 'string' && s.birthDate)
+    ? s.birthDate
+    : (typeof prof.birthDate === 'string' ? prof.birthDate : '');
+  const mirroredProfile = {
+    id: 1,
+    name: typeof prof.name === 'string' ? prof.name : '',
+    avatarKey: typeof prof.avatarKey === 'string' ? prof.avatarKey : 'default',
+    gender: typeof prof.gender === 'string' ? prof.gender : '',
+    country: typeof prof.country === 'string' ? prof.country : '',
+    province: typeof prof.province === 'string' ? prof.province : '',
+    signature: typeof prof.signature === 'string' ? prof.signature : '',
+    birthDate: birthDate,
+    // 自定义字段：Web 数组 → Android JSON 字符串（两端 shape 一致 {id,label,value}）
+    customFieldsJson: (Array.isArray(prof.customFields))
+      ? JSON.stringify(prof.customFields.slice(0, 20))
+      : '',
+  };
+  const payload = {
+    format: BACKUP_FORMAT,
+    formatVersion: BACKUP_FORMAT_VERSION,
+    appVersion: (typeof s.version === 'number') ? s.version : 3,
+    exportedAt: new Date().toISOString(),
+    storageKey: STORAGE_KEY,
+    state: s,
+    extra: collectExtraStorage(),
+    // ---- Android 兼容镜像（顶层裸字段；kotlinx ignoreUnknownKeys 忽略多余键）----
+    version: (typeof s.version === 'number') ? s.version : 3,
+    profile: mirroredProfile,
+    tasks: s.tasks || [],
+    memos: s.memos || [],
+    items: s.items || [],
+    achievements: s.achievements || [],
+    collections: s.collections || [],
+    locations: (s.locations || []).map(function (l) {
+      if (!l || typeof l !== 'object') return l;
+      let out = {};
+      try { out = JSON.parse(JSON.stringify(l)); } catch (e) { out = l; }
+      if (Array.isArray(l.tags)) out.tagsJson = JSON.stringify(l.tags.slice(0, 30));
+      delete out.tags; // Android 用 tagsJson
+      return out;
+    }),
+    activities: s.activities || [],
+  };
+  return payload;
+}
+
+/**
  * 列出全部持久化键（优先经 EOStore：IDB 主，localStorage 降级；EOStore 未就绪时退化到 localStorage 枚举）。
  * 绝不抛异常。
  */
@@ -261,6 +330,12 @@ function applyBackupPayload(obj) {
     // 与当前状态按主键合并（当前 state 可能是 null —— 极端情况下按空状态处理）
     const merged = mergeStateForImport(state, cleanIncoming);
     next = sanitizeState(merged);                  // 合并结果再走一次清洗，保证结构合法
+    // 兼容 Android 裸格式：birthDate 内嵌在 profile（Web 是 state 顶级字段），
+    // sanitizeState 不会从 profile 里提取它，这里手动桥接，保证等级 / 年龄跨端一致。
+    if ((!next.birthDate) && incoming && incoming.profile && typeof incoming.profile === 'object' &&
+        typeof incoming.profile.birthDate === 'string' && incoming.profile.birthDate) {
+      next.birthDate = incoming.profile.birthDate;
+    }
   } catch (e) {
     // 清洗阶段抛异常时：不写快照、不改 state、不落盘，当前数据分毫未动
     return { ok: false, error: '备份文件已损坏，无法导入（当前数据未改动）' };
@@ -614,6 +689,8 @@ function handleBackupFileSelected(file) {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.isBackupExtraKey === "undefined") globalThis.isBackupExtraKey = isBackupExtraKey; } catch (e) {}
   E.buildBackupPayload = buildBackupPayload;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.buildBackupPayload === "undefined") globalThis.buildBackupPayload = buildBackupPayload; } catch (e) {}
+  E.buildWebdavPayload = buildWebdavPayload;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.buildWebdavPayload === "undefined") globalThis.buildWebdavPayload = buildWebdavPayload; } catch (e) {}
   E.listStorageKeys = listStorageKeys;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.listStorageKeys === "undefined") globalThis.listStorageKeys = listStorageKeys; } catch (e) {}
   E.readStoredValue = readStoredValue;

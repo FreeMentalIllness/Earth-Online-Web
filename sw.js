@@ -12,8 +12,8 @@
  * - 全文不出现任何 http(s) 字面量（QA 静态检查「无外部网络依赖」要求）。
  */
 
-/** 缓存版本：改名即全量更新 */
-var CACHE = 'earth-online-v1';
+/** 缓存版本：改名即全量更新（v2 起预缓存动态模块 ai/map，离线打开 AI / 足迹地图也不缺脚本） */
+var CACHE = 'earth-online-v2';
 
 /** 预缓存清单（全部相对路径） */
 var PRECACHE = [
@@ -32,6 +32,8 @@ var PRECACHE = [
   './modules/webdav.js',
   './modules/stats.js',
   './modules/account.js',
+  './modules/ai.js',
+  './modules/map.js',
   './modules/pages.js',
   './modules/app.js',
 ];

@@ -50,6 +50,43 @@ let dashboardView = 'overview';
 /** 时间线容器一次最多渲染的条数（防止极端数据卡顿；实际按时间升序全量渲染） */
 const TIMELINE_MAX = 500;
 
+/* ==================== 看板视图 / 趋势区间的受控修改 ====================
+   ⚠️ 这两个变量是 `let` 声明在本文件 IIFE 内的**模块私有变量**。
+   末尾那句 `globalThis.dashboardView = dashboardView` 导出的只是**当时的值快照**，
+   外部（pages.js）直接赋值 `dashboardView = 'calendar'` 改的是那个全局快照副本，
+   而 renderDashboard() 读的仍是本模块内的私有变量 —— 于是「日历视图 / 近 4 周」
+   点了永远不生效（表现就是「点了没反应」）。
+   因此必须提供 setter，由外部显式调用来改这里的真身；直接改写全局快照无效。 */
+
+/**
+ * 设置看板视图。
+ * @param {string} v 'calendar' 日历视图 / 其它一律视为 'overview' 数据概览
+ * @returns {string} 生效后的值
+ */
+function setDashboardView(v) {
+  dashboardView = (v === 'calendar') ? 'calendar' : 'overview';
+  // 同步全局快照，避免外部读到旧值（读路径仍应优先用 getDashboardView）
+  try { if (typeof globalThis !== 'undefined') globalThis.dashboardView = dashboardView; } catch (e) {}
+  return dashboardView;
+}
+
+/**
+ * 设置趋势区间。
+ * @param {string} v '4w' 近 4 周 / 其它一律视为 '7d' 近 7 天
+ * @returns {string} 生效后的值
+ */
+function setDashboardTrendRange(v) {
+  dashboardTrendRange = (v === '4w') ? '4w' : '7d';
+  try { if (typeof globalThis !== 'undefined') globalThis.dashboardTrendRange = dashboardTrendRange; } catch (e) {}
+  return dashboardTrendRange;
+}
+
+/** 读取当前看板视图（供外部/测试确认生效） */
+function getDashboardView() { return dashboardView; }
+
+/** 读取当前趋势区间 */
+function getDashboardTrendRange() { return dashboardTrendRange; }
+
 /* ==================== 聚合（纯函数，QA 可直测） ==================== */
 
 /** 取数组字段，容错非数组 */
@@ -499,6 +536,14 @@ function renderDashboard() {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.dashboardTrendRange === "undefined") globalThis.dashboardTrendRange = dashboardTrendRange; } catch (e) {}
   E.dashboardView = dashboardView;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.dashboardView === "undefined") globalThis.dashboardView = dashboardView; } catch (e) {}
+  E.setDashboardView = setDashboardView;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.setDashboardView === "undefined") globalThis.setDashboardView = setDashboardView; } catch (e) {}
+  E.setDashboardTrendRange = setDashboardTrendRange;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.setDashboardTrendRange === "undefined") globalThis.setDashboardTrendRange = setDashboardTrendRange; } catch (e) {}
+  E.getDashboardView = getDashboardView;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.getDashboardView === "undefined") globalThis.getDashboardView = getDashboardView; } catch (e) {}
+  E.getDashboardTrendRange = getDashboardTrendRange;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.getDashboardTrendRange === "undefined") globalThis.getDashboardTrendRange = getDashboardTrendRange; } catch (e) {}
   E.TIMELINE_MAX = TIMELINE_MAX;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.TIMELINE_MAX === "undefined") globalThis.TIMELINE_MAX = TIMELINE_MAX; } catch (e) {}
   E.dashArr = dashArr;

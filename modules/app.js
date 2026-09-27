@@ -78,7 +78,28 @@ function findPage(key) {
 function refreshCurrentPage(opts) {
   const page = findPage(currentPage);
   if (!page) return;
-  page.render();
+  // 渲染守卫：任何一个页面渲染函数抛异常都会让「点导航没反应」且不留提示，
+  // 这里兜住并给出轻提示 + 控制台留痕，避免静默失败。
+  if (typeof page.render !== 'function') {
+    try {
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('[地球Online] 页面缺少渲染函数：' + String(currentPage));
+      }
+    } catch (e) { /* 忽略 */ }
+    try { if (typeof toast === 'function') toast('页面加载失败，请刷新重试'); } catch (e) { /* 忽略 */ }
+    return;
+  }
+  try {
+    page.render();
+  } catch (err) {
+    try {
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('[地球Online] 页面渲染失败：' + String(currentPage), err);
+      }
+    } catch (e) { /* 忽略 */ }
+    try { if (typeof toast === 'function') toast('页面加载失败，请刷新重试'); } catch (e) { /* 忽略 */ }
+    return;
+  }
   if (opts && opts.animate) applyPageEnterAnimation();
 }
 
@@ -586,7 +607,17 @@ async function startMainApp() {
     }).join('');
     nav.addEventListener('click', function (e) {
       const btn = e.target.closest('.nav-item');
-      if (btn) navigate(btn.dataset.page);
+      if (!btn) return;
+      try {
+        navigate(btn.dataset.page);
+      } catch (err) {
+        try {
+          if (typeof console !== 'undefined' && console.error) {
+            console.error('[地球Online] 导航失败：' + String(btn.dataset.page), err);
+          }
+        } catch (e2) { /* 忽略 */ }
+        try { if (typeof toast === 'function') toast('打开页面失败，请重试'); } catch (e2) { /* 忽略 */ }
+      }
     });
   }
 

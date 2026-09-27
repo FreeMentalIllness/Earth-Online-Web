@@ -1832,7 +1832,7 @@ function renderSettings() {
             '" data-action="font-scale" data-value="' + o.k + '">' + o.label + '</button>';
         }).join('');
         return '' +
-        '<div class="card">' +
+        '<div class="card settings-appearance">' +
           '<div class="card-title">🎨 主题与背景</div>' +
           '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。</p>' +
           '<div class="form-row"><span class="field-label">主题</span>' +
@@ -2387,7 +2387,25 @@ function bindGlobalEvents() {
   const authRoot = document.getElementById('auth-root');
 
   // 点击类：导航按钮 / 任务操作 / tab / 日历 / 成就 / 设置
+  /**
+   * 点击分发外层守卫。
+   * 任何一个 case 抛异常都会中断事件回调 → 页面「点了没反应」且控制台只有一行红字，
+   * 用户无从判断是没点上还是报错。这里统一兜底：控制台留痕 + 轻提示。
+   */
   function dispatchClick(e) {
+    try {
+      __dispatchClickInner(e);
+    } catch (err) {
+      try {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[地球Online] 交互异常', err);
+        }
+      } catch (e2) { /* 控制台不可用时忽略 */ }
+      try { if (typeof toast === 'function') toast('操作失败，请重试'); } catch (e2) { /* 忽略 */ }
+    }
+  }
+
+  function __dispatchClickInner(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const action = btn.dataset.action;
@@ -2810,14 +2828,19 @@ function bindGlobalEvents() {
         break;
 
       /* ---------- v4 PART2：看板趋势区间切换 ---------- */
+      /* ⚠️ 必须走 stats.js 的 setter：dashboardTrendRange 是它的模块私有变量，
+         这里直接给全局快照赋值改不到真身，趋势区间会永远停在「近 7 天」。 */
       case 'dash-range':
-        dashboardTrendRange = (btn.dataset.range === '4w') ? '4w' : '7d';
+        if (typeof setDashboardTrendRange === 'function') setDashboardTrendRange(btn.dataset.range);
+        else dashboardTrendRange = (btn.dataset.range === '4w') ? '4w' : '7d';
         refreshCurrentPage();
         break;
 
       /* ---------- v5：数据页视图切换（数据概览 / 日历视图） ---------- */
+      /* 同上：必须走 setter，否则「📅 日历视图」点了不生效。 */
       case 'dash-view':
-        dashboardView = (btn.dataset.view === 'calendar') ? 'calendar' : 'overview';
+        if (typeof setDashboardView === 'function') setDashboardView(btn.dataset.view);
+        else dashboardView = (btn.dataset.view === 'calendar') ? 'calendar' : 'overview';
         refreshCurrentPage();
         break;
 
@@ -2825,7 +2848,9 @@ function bindGlobalEvents() {
       case 'jump-dashboard': {
         dashboardFocus = btn.dataset.target || '';
         // 目标区块只存在于概览视图；若用户正停在日历视图，先切回去
-        dashboardView = 'overview';
+        // 同样必须走 setter，否则日历视图切不回来
+        if (typeof setDashboardView === 'function') setDashboardView('overview');
+        else dashboardView = 'overview';
         // 跳过「回到顶部」：紧接着要滚到目标区块，两次平滑滚动并发会互相打断
         navigate('data', { scrollTop: false });
         if (typeof toast === 'function') toast('已跳转到数据看板');
@@ -3032,7 +3057,13 @@ function bindGlobalEvents() {
           '<p class="modal-text">地球Online 完全免费、无广告、无服务器成本。' +
             '如果它陪你走过了一段路，欢迎扫码请开发者喝一杯 ☕（金额随意）。</p>' +
           '<div class="sponsor-qr-wrap">' +
-            '<img class="sponsor-qr" src="icons/sponsor-qr.jpg" alt="赞助收款码">' +
+            /* 赞助码：WebP 优先（69KB JPG → 19KB），不支持时回落到同名 JPG；
+               弹窗内容默认不渲染，故加 loading="lazy" + decoding="async" 避免首屏抢占带宽。 */
+            '<picture>' +
+              '<source srcset="icons/sponsor-qr.webp" type="image/webp">' +
+              '<img class="sponsor-qr" src="icons/sponsor-qr.jpg" alt="赞助收款码"' +
+                ' loading="lazy" decoding="async" width="586" height="640">' +
+            '</picture>' +
           '</div>' +
           '<p class="muted sponsor-qr-tip">长按图片保存到相册，再用微信「扫一扫 · 相册」识别。</p>' +
           '<div class="modal-actions"><button class="btn btn-primary" data-action="close-modal">知道啦</button></div>'

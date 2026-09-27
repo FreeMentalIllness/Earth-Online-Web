@@ -406,7 +406,7 @@ function webdavUploadBackup(btn) {
 
   let body = '';
   try {
-    body = JSON.stringify(buildBackupPayload(), null, 2);
+    body = JSON.stringify(buildWebdavPayload(), null, 2);
   } catch (e) {
     restore();
     if (typeof toast === 'function') toast('备份生成失败：数据无法序列化');
@@ -603,7 +603,7 @@ function webdavPushOnHide() {
     const auth = webdavBasicAuth(cfg.user, decodeWebdavSecret(cfg.pass));
     let body = '';
     try {
-      body = JSON.stringify(buildBackupPayload(), null, 2);
+      body = JSON.stringify(buildWebdavPayload(), null, 2);
     } catch (e) {
       return;
     }

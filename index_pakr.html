@@ -2253,6 +2253,110 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 .privacy-sec-title { font-weight: 700; font-size: var(--font-body); margin-bottom: 4px; }
 .privacy-sec-body { font-size: var(--font-caption); color: var(--muted); line-height: 1.7; }
 
+/* ==================== 体检 · 设置页 UI 尺寸统一 ==================== */
+
+/* ---- ①「记账 / 下载引导」弹窗三键：等宽等高、水平居中平行 ----
+   原来只有 flex:1 1 0，但 flex 项默认 min-width:auto —— 文案长的按钮（「GitHub 下载」）
+   会被 min-content 撑大，三键看起来参差不齐。补 min-width:0 才能真正等宽，
+   再统一 height / padding / 居中方式，保证三键同一行且高度一致。 */
+.modal-actions-equal .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+/* 三键在小屏也不换行，靠等分宽度容纳文案（字号随屏收窄，避免溢出） */
+@media (max-width: 480px) {
+  .modal-actions-equal .btn { height: 42px; padding: 0 6px; font-size: 12.5px; }
+}
+
+/* ---- ②「外观」分组：标签 / 分段按钮 / 输入框 / 按钮 / 壁纸色块统一尺寸 ---- */
+.settings-appearance .form-row { align-items: center; margin-bottom: 12px; }
+.settings-appearance .field-label,
+.settings-appearance .form-row label {
+  width: 84px;                 /* 与 .field-label 基线一致，不再出现 84/88 两种宽度 */
+  flex-shrink: 0;
+  padding-top: 0;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--text);
+}
+/* 分段按钮（主题 / 字号）：统一高度与内边距，消除两档之间的高矮差 */
+.settings-appearance .seg-btn {
+  min-height: 38px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-caption);
+}
+/* 输入框 / 日期框：统一高度与内边距 */
+.settings-appearance .form-row input,
+.settings-appearance .form-row select,
+.settings-appearance .form-inline input[type="date"],
+.settings-appearance .list-input {
+  min-height: 38px;
+  padding: 8px 11px;
+  font-size: var(--font-body);
+}
+/* 按钮（上传图片 / 恢复默认 等）：与输入框同高，视觉对齐 */
+.settings-appearance .form-inline .btn,
+.settings-appearance .btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 壁纸预设色块：统一为正方形，避免与相邻控件高矮不一 */
+.settings-appearance .wall-preset {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+.settings-appearance .wall-presets { gap: 10px; align-items: center; }
+
+/* ==================== 体检 · 移动端响应式加固 ====================
+   目标：手机上卡片不再挤在一起。主流卡片栅格已用 auto-fit / auto-fill 自然回流，
+   这里只补「固定 N 列栅格在手机上过窄」与「极小屏间距」两处。 */
+
+@media (max-width: 768px) {
+  /* 人生卡片统计：原 4 列在手机上每格过窄，改 2 列更易读 */
+  .life-card-stats { grid-template-columns: repeat(2, 1fr); }
+  /* 备份摘要兜底保持 3 列（旧存档可能没吃到 1514 块的覆盖） */
+  .backup-summary { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+  :root { --space-gap: 10px; }
+  #content { padding: 16px 12px 76px; }
+  .card { padding: 15px; }
+  /* 概览 / 统计 / 迷你卡 / 月报 / 年报：小屏保持 2 列，仅收紧间距，避免数字被挤窄 */
+  .overview-grid,
+  .stat-grid,
+  .mini-grid,
+  .month-grid,
+  .year-grid,
+  .backup-summary { gap: 10px; }
+  .stat-num { letter-spacing: -0.01em; }
+  /* 快速入口 4 列在小屏收窄留白，图标 + 短标签仍可读 */
+  .quick-grid { gap: 7px; }
+  .quick-tile { padding: 14px 6px; }
+  .mood-picker-grid { gap: 7px; }
+  .lcs { padding: 8px 2px; }
+  .life-card { padding: 15px; }
+  /* 设置页分组标题在极窄屏不吸顶，避免遮挡首行 */
+  .settings-group-title { position: static; }
+  /* 模态框在小屏更贴边 */
+  .modal-wide { width: 94vw; }
+}
+
 </style>
 <script>window._AMapSecurityConfig = { securityJsCode: "d4e92781da1ca5996c246d315af66031" };</script>
 <script src="https://webapi.amap.com/maps?v=2.0&key=07672883965ec7a6f0948813c0a90915"></script>
@@ -8804,6 +8908,75 @@ var backpackTab = 'all';
   }
 
   /**
+   * WebDAV 同步专用载荷（Android 互通版）。
+   *
+   * 与 buildBackupPayload 的区别：在「信封格式」之外，额外在**顶层**镜像一份
+   * Android 端 BackupRepository.Payload 期望的裸字段（profile / tasks / memos /
+   * items / achievements / collections / locations / activities / version）。
+   *
+   * 为什么需要两份？
+   * - 本端（Web）读备份走 extractBackupState → 优先取 envelope.state，镜像字段被忽略；
+   * - Android 端用 kotlinx Json { ignoreUnknownKeys = true } 解析，会忽略 envelope 的
+   *   format/state/extra 等未知键，只读顶层的裸字段 —— 因此同一份文件两端都能解析。
+   *
+   * 字段对齐要点（与 Android 实体逐字段核对，见 earth-online-android 的 Entities.kt）：
+   * - profile：注入 birthDate（Web 是 state 顶级字段，Android 内嵌在 ProfileEntity）与 id=1；
+   *   不传 avatarPath / avatarData（Web 头像走 dataURL，与 Android「设备路径 + Base64 字节」模型不互通）；
+   *   自定义字段序列化成 customFieldsJson（两端 CustomField 均为 {id,label,value}）。
+   * - locations：tags 数组 → tagsJson（Android 用 JSON 字符串），删除 Web 专用的 tags 键。
+   * - 其余 tasks/memos/items/achievements/collections/activities 的字段名与 Android 实体一一对应
+   *   （task 的 sort_order 在 Android 单独存为 order，Web 不维护手动排序，属已知的单向字段）。
+   */
+  function buildWebdavPayload() {
+    var s = state || {};
+    var prof = s.profile && _typeof(s.profile) === 'object' ? s.profile : {};
+    var birthDate = typeof s.birthDate === 'string' && s.birthDate ? s.birthDate : typeof prof.birthDate === 'string' ? prof.birthDate : '';
+    var mirroredProfile = {
+      id: 1,
+      name: typeof prof.name === 'string' ? prof.name : '',
+      avatarKey: typeof prof.avatarKey === 'string' ? prof.avatarKey : 'default',
+      gender: typeof prof.gender === 'string' ? prof.gender : '',
+      country: typeof prof.country === 'string' ? prof.country : '',
+      province: typeof prof.province === 'string' ? prof.province : '',
+      signature: typeof prof.signature === 'string' ? prof.signature : '',
+      birthDate: birthDate,
+      // 自定义字段：Web 数组 → Android JSON 字符串（两端 shape 一致 {id,label,value}）
+      customFieldsJson: Array.isArray(prof.customFields) ? JSON.stringify(prof.customFields.slice(0, 20)) : ''
+    };
+    var payload = {
+      format: BACKUP_FORMAT,
+      formatVersion: BACKUP_FORMAT_VERSION,
+      appVersion: typeof s.version === 'number' ? s.version : 3,
+      exportedAt: new Date().toISOString(),
+      storageKey: STORAGE_KEY,
+      state: s,
+      extra: collectExtraStorage(),
+      // ---- Android 兼容镜像（顶层裸字段；kotlinx ignoreUnknownKeys 忽略多余键）----
+      version: typeof s.version === 'number' ? s.version : 3,
+      profile: mirroredProfile,
+      tasks: s.tasks || [],
+      memos: s.memos || [],
+      items: s.items || [],
+      achievements: s.achievements || [],
+      collections: s.collections || [],
+      locations: (s.locations || []).map(function (l) {
+        if (!l || _typeof(l) !== 'object') return l;
+        var out = {};
+        try {
+          out = JSON.parse(JSON.stringify(l));
+        } catch (e) {
+          out = l;
+        }
+        if (Array.isArray(l.tags)) out.tagsJson = JSON.stringify(l.tags.slice(0, 30));
+        delete out.tags; // Android 用 tagsJson
+        return out;
+      }),
+      activities: s.activities || []
+    };
+    return payload;
+  }
+
+  /**
    * 列出全部持久化键（优先经 EOStore：IDB 主，localStorage 降级；EOStore 未就绪时退化到 localStorage 枚举）。
    * 绝不抛异常。
    */
@@ -9008,6 +9181,11 @@ var backpackTab = 'all';
       // 与当前状态按主键合并（当前 state 可能是 null —— 极端情况下按空状态处理）
       var merged = mergeStateForImport(state, cleanIncoming);
       next = sanitizeState(merged); // 合并结果再走一次清洗，保证结构合法
+      // 兼容 Android 裸格式：birthDate 内嵌在 profile（Web 是 state 顶级字段），
+      // sanitizeState 不会从 profile 里提取它，这里手动桥接，保证等级 / 年龄跨端一致。
+      if (!next.birthDate && incoming && incoming.profile && _typeof(incoming.profile) === 'object' && typeof incoming.profile.birthDate === 'string' && incoming.profile.birthDate) {
+        next.birthDate = incoming.profile.birthDate;
+      }
     } catch (e) {
       // 清洗阶段抛异常时：不写快照、不改 state、不落盘，当前数据分毫未动
       return {
@@ -9410,6 +9588,10 @@ var backpackTab = 'all';
   E.buildBackupPayload = buildBackupPayload;
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.buildBackupPayload === "undefined") globalThis.buildBackupPayload = buildBackupPayload;
+  } catch (e) {}
+  E.buildWebdavPayload = buildWebdavPayload;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.buildWebdavPayload === "undefined") globalThis.buildWebdavPayload = buildWebdavPayload;
   } catch (e) {}
   E.listStorageKeys = listStorageKeys;
   try {
@@ -9918,7 +10100,7 @@ var backpackTab = 'all';
     var restore = webdavBeginLoading(btn, '上传中...');
     var body = '';
     try {
-      body = JSON.stringify(buildBackupPayload(), null, 2);
+      body = JSON.stringify(buildWebdavPayload(), null, 2);
     } catch (e) {
       restore();
       if (typeof toast === 'function') toast('备份生成失败：数据无法序列化');
@@ -10122,7 +10304,7 @@ var backpackTab = 'all';
       var auth = webdavBasicAuth(cfg.user, decodeWebdavSecret(cfg.pass));
       var body = '';
       try {
-        body = JSON.stringify(buildBackupPayload(), null, 2);
+        body = JSON.stringify(buildWebdavPayload(), null, 2);
       } catch (e) {
         return;
       }
@@ -10397,6 +10579,51 @@ var backpackTab = 'all';
 
   /** 时间线容器一次最多渲染的条数（防止极端数据卡顿；实际按时间升序全量渲染） */
   var TIMELINE_MAX = 500;
+
+  /* ==================== 看板视图 / 趋势区间的受控修改 ====================
+     ⚠️ 这两个变量是 `let` 声明在本文件 IIFE 内的**模块私有变量**。
+     末尾那句 `globalThis.dashboardView = dashboardView` 导出的只是**当时的值快照**，
+     外部（pages.js）直接赋值 `dashboardView = 'calendar'` 改的是那个全局快照副本，
+     而 renderDashboard() 读的仍是本模块内的私有变量 —— 于是「日历视图 / 近 4 周」
+     点了永远不生效（表现就是「点了没反应」）。
+     因此必须提供 setter，由外部显式调用来改这里的真身；直接改写全局快照无效。 */
+
+  /**
+   * 设置看板视图。
+   * @param {string} v 'calendar' 日历视图 / 其它一律视为 'overview' 数据概览
+   * @returns {string} 生效后的值
+   */
+  function setDashboardView(v) {
+    dashboardView = v === 'calendar' ? 'calendar' : 'overview';
+    // 同步全局快照，避免外部读到旧值（读路径仍应优先用 getDashboardView）
+    try {
+      if (typeof globalThis !== 'undefined') globalThis.dashboardView = dashboardView;
+    } catch (e) {}
+    return dashboardView;
+  }
+
+  /**
+   * 设置趋势区间。
+   * @param {string} v '4w' 近 4 周 / 其它一律视为 '7d' 近 7 天
+   * @returns {string} 生效后的值
+   */
+  function setDashboardTrendRange(v) {
+    dashboardTrendRange = v === '4w' ? '4w' : '7d';
+    try {
+      if (typeof globalThis !== 'undefined') globalThis.dashboardTrendRange = dashboardTrendRange;
+    } catch (e) {}
+    return dashboardTrendRange;
+  }
+
+  /** 读取当前看板视图（供外部/测试确认生效） */
+  function getDashboardView() {
+    return dashboardView;
+  }
+
+  /** 读取当前趋势区间 */
+  function getDashboardTrendRange() {
+    return dashboardTrendRange;
+  }
 
   /* ==================== 聚合（纯函数，QA 可直测） ==================== */
 
@@ -10840,6 +11067,22 @@ var backpackTab = 'all';
   E.dashboardView = dashboardView;
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.dashboardView === "undefined") globalThis.dashboardView = dashboardView;
+  } catch (e) {}
+  E.setDashboardView = setDashboardView;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.setDashboardView === "undefined") globalThis.setDashboardView = setDashboardView;
+  } catch (e) {}
+  E.setDashboardTrendRange = setDashboardTrendRange;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.setDashboardTrendRange === "undefined") globalThis.setDashboardTrendRange = setDashboardTrendRange;
+  } catch (e) {}
+  E.getDashboardView = getDashboardView;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.getDashboardView === "undefined") globalThis.getDashboardView = getDashboardView;
+  } catch (e) {}
+  E.getDashboardTrendRange = getDashboardTrendRange;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.getDashboardTrendRange === "undefined") globalThis.getDashboardTrendRange = getDashboardTrendRange;
   } catch (e) {}
   E.TIMELINE_MAX = TIMELINE_MAX;
   try {
@@ -12649,7 +12892,7 @@ var backpackTab = 'all';
       }].map(function (o) {
         return '<button class="seg-btn' + (fs === o.k ? ' active' : '') + '" data-action="font-scale" data-value="' + o.k + '">' + o.label + '</button>';
       }).join('');
-      return '' + '<div class="card">' + '<div class="card-title">🎨 主题与背景</div>' + '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。</p>' + '<div class="form-row"><span class="field-label">主题</span>' + '<div class="seg">' + '<button class="seg-btn' + (t === 'light' ? ' active' : '') + '" data-action="theme-set" data-theme="light">☀️ 亮色</button>' + '<button class="seg-btn' + (t === 'dark' ? ' active' : '') + '" data-action="theme-set" data-theme="dark">🌙 深色</button>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">壁纸</span>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="wallpaper-upload">🖼️ 上传图片</button>' + (wtype !== 'none' ? '<button class="btn btn-ghost" data-action="wallpaper-reset">恢复默认</button>' : '') + '</div>' + '</div>' + '<div class="wall-presets">' + presetBtns + '</div>' + '<div class="form-row"><span class="field-label">字号</span>' + '<div class="seg">' + fsOpts + '</div>' + '</div>' + '<p class="backup-note">字号只影响内容区（侧栏与底栏保持原尺寸），最大档约放大 20%。</p>' + '</div>';
+      return '' + '<div class="card settings-appearance">' + '<div class="card-title">🎨 主题与背景</div>' + '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。</p>' + '<div class="form-row"><span class="field-label">主题</span>' + '<div class="seg">' + '<button class="seg-btn' + (t === 'light' ? ' active' : '') + '" data-action="theme-set" data-theme="light">☀️ 亮色</button>' + '<button class="seg-btn' + (t === 'dark' ? ' active' : '') + '" data-action="theme-set" data-theme="dark">🌙 深色</button>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">壁纸</span>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="wallpaper-upload">🖼️ 上传图片</button>' + (wtype !== 'none' ? '<button class="btn btn-ghost" data-action="wallpaper-reset">恢复默认</button>' : '') + '</div>' + '</div>' + '<div class="wall-presets">' + presetBtns + '</div>' + '<div class="form-row"><span class="field-label">字号</span>' + '<div class="seg">' + fsOpts + '</div>' + '</div>' + '<p class="backup-note">字号只影响内容区（侧栏与底栏保持原尺寸），最大档约放大 20%。</p>' + '</div>';
     }() + /* ==================== ② 通用 ==================== */
     groupDivider() + groupTitle('🧩', '通用', '角色 · 记账 · 提醒') +
     // v19：账号卡片移除 → 个人资料卡
@@ -13078,7 +13321,26 @@ var backpackTab = 'all';
     var authRoot = document.getElementById('auth-root');
 
     // 点击类：导航按钮 / 任务操作 / tab / 日历 / 成就 / 设置
+    /**
+     * 点击分发外层守卫。
+     * 任何一个 case 抛异常都会中断事件回调 → 页面「点了没反应」且控制台只有一行红字，
+     * 用户无从判断是没点上还是报错。这里统一兜底：控制台留痕 + 轻提示。
+     */
     function dispatchClick(e) {
+      try {
+        __dispatchClickInner(e);
+      } catch (err) {
+        try {
+          if (typeof console !== 'undefined' && console.error) {
+            console.error('[地球Online] 交互异常', err);
+          }
+        } catch (e2) {/* 控制台不可用时忽略 */}
+        try {
+          if (typeof toast === 'function') toast('操作失败，请重试');
+        } catch (e2) {/* 忽略 */}
+      }
+    }
+    function __dispatchClickInner(e) {
       var btn = e.target.closest('[data-action]');
       if (!btn) return;
       var action = btn.dataset.action;
@@ -13562,14 +13824,17 @@ var backpackTab = 'all';
           break;
 
         /* ---------- v4 PART2：看板趋势区间切换 ---------- */
+        /* ⚠️ 必须走 stats.js 的 setter：dashboardTrendRange 是它的模块私有变量，
+           这里直接给全局快照赋值改不到真身，趋势区间会永远停在「近 7 天」。 */
         case 'dash-range':
-          dashboardTrendRange = btn.dataset.range === '4w' ? '4w' : '7d';
+          if (typeof setDashboardTrendRange === 'function') setDashboardTrendRange(btn.dataset.range);else dashboardTrendRange = btn.dataset.range === '4w' ? '4w' : '7d';
           refreshCurrentPage();
           break;
 
         /* ---------- v5：数据页视图切换（数据概览 / 日历视图） ---------- */
+        /* 同上：必须走 setter，否则「📅 日历视图」点了不生效。 */
         case 'dash-view':
-          dashboardView = btn.dataset.view === 'calendar' ? 'calendar' : 'overview';
+          if (typeof setDashboardView === 'function') setDashboardView(btn.dataset.view);else dashboardView = btn.dataset.view === 'calendar' ? 'calendar' : 'overview';
           refreshCurrentPage();
           break;
 
@@ -13578,7 +13843,8 @@ var backpackTab = 'all';
           {
             dashboardFocus = btn.dataset.target || '';
             // 目标区块只存在于概览视图；若用户正停在日历视图，先切回去
-            dashboardView = 'overview';
+            // 同样必须走 setter，否则日历视图切不回来
+            if (typeof setDashboardView === 'function') setDashboardView('overview');else dashboardView = 'overview';
             // 跳过「回到顶部」：紧接着要滚到目标区块，两次平滑滚动并发会互相打断
             navigate('data', {
               scrollTop: false
@@ -13795,7 +14061,10 @@ var backpackTab = 'all';
             break;
           }
         case 'about-sponsor':
-          openModal('<h3 class="modal-title">❤️ 赞助开发者</h3>' + '<p class="modal-text">地球Online 完全免费、无广告、无服务器成本。' + '如果它陪你走过了一段路，欢迎扫码请开发者喝一杯 ☕（金额随意）。</p>' + '<div class="sponsor-qr-wrap">' + '<img class="sponsor-qr" src="icons/sponsor-qr.jpg" alt="赞助收款码">' + '</div>' + '<p class="muted sponsor-qr-tip">长按图片保存到相册，再用微信「扫一扫 · 相册」识别。</p>' + '<div class="modal-actions"><button class="btn btn-primary" data-action="close-modal">知道啦</button></div>');
+          openModal('<h3 class="modal-title">❤️ 赞助开发者</h3>' + '<p class="modal-text">地球Online 完全免费、无广告、无服务器成本。' + '如果它陪你走过了一段路，欢迎扫码请开发者喝一杯 ☕（金额随意）。</p>' + '<div class="sponsor-qr-wrap">' +
+          /* 赞助码：WebP 优先（69KB JPG → 19KB），不支持时回落到同名 JPG；
+             弹窗内容默认不渲染，故加 loading="lazy" + decoding="async" 避免首屏抢占带宽。 */
+          '<picture>' + '<source srcset="icons/sponsor-qr.webp" type="image/webp">' + '<img class="sponsor-qr" src="icons/sponsor-qr.jpg" alt="赞助收款码"' + ' loading="lazy" decoding="async" width="586" height="640">' + '</picture>' + '</div>' + '<p class="muted sponsor-qr-tip">长按图片保存到相册，再用微信「扫一扫 · 相册」识别。</p>' + '<div class="modal-actions"><button class="btn btn-primary" data-action="close-modal">知道啦</button></div>');
           break;
 
         /* ---------- v1.2.0：字号三档 ---------- */
@@ -14611,7 +14880,32 @@ var backpackTab = 'all';
   function refreshCurrentPage(opts) {
     var page = findPage(currentPage);
     if (!page) return;
-    page.render();
+    // 渲染守卫：任何一个页面渲染函数抛异常都会让「点导航没反应」且不留提示，
+    // 这里兜住并给出轻提示 + 控制台留痕，避免静默失败。
+    if (typeof page.render !== 'function') {
+      try {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[地球Online] 页面缺少渲染函数：' + String(currentPage));
+        }
+      } catch (e) {/* 忽略 */}
+      try {
+        if (typeof toast === 'function') toast('页面加载失败，请刷新重试');
+      } catch (e) {/* 忽略 */}
+      return;
+    }
+    try {
+      page.render();
+    } catch (err) {
+      try {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[地球Online] 页面渲染失败：' + String(currentPage), err);
+        }
+      } catch (e) {/* 忽略 */}
+      try {
+        if (typeof toast === 'function') toast('页面加载失败，请刷新重试');
+      } catch (e) {/* 忽略 */}
+      return;
+    }
     if (opts && opts.animate) applyPageEnterAnimation();
   }
 
@@ -15213,7 +15507,19 @@ var backpackTab = 'all';
               }).join('');
               nav.addEventListener('click', function (e) {
                 var btn = e.target.closest('.nav-item');
-                if (btn) navigate(btn.dataset.page);
+                if (!btn) return;
+                try {
+                  navigate(btn.dataset.page);
+                } catch (err) {
+                  try {
+                    if (typeof console !== 'undefined' && console.error) {
+                      console.error('[地球Online] 导航失败：' + String(btn.dataset.page), err);
+                    }
+                  } catch (e2) {/* 忽略 */}
+                  try {
+                    if (typeof toast === 'function') toast('打开页面失败，请重试');
+                  } catch (e2) {/* 忽略 */}
+                }
               });
             }
 

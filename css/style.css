@@ -2241,3 +2241,107 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 }
 .privacy-sec-title { font-weight: 700; font-size: var(--font-body); margin-bottom: 4px; }
 .privacy-sec-body { font-size: var(--font-caption); color: var(--muted); line-height: 1.7; }
+
+/* ==================== 体检 · 设置页 UI 尺寸统一 ==================== */
+
+/* ---- ①「记账 / 下载引导」弹窗三键：等宽等高、水平居中平行 ----
+   原来只有 flex:1 1 0，但 flex 项默认 min-width:auto —— 文案长的按钮（「GitHub 下载」）
+   会被 min-content 撑大，三键看起来参差不齐。补 min-width:0 才能真正等宽，
+   再统一 height / padding / 居中方式，保证三键同一行且高度一致。 */
+.modal-actions-equal .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+/* 三键在小屏也不换行，靠等分宽度容纳文案（字号随屏收窄，避免溢出） */
+@media (max-width: 480px) {
+  .modal-actions-equal .btn { height: 42px; padding: 0 6px; font-size: 12.5px; }
+}
+
+/* ---- ②「外观」分组：标签 / 分段按钮 / 输入框 / 按钮 / 壁纸色块统一尺寸 ---- */
+.settings-appearance .form-row { align-items: center; margin-bottom: 12px; }
+.settings-appearance .field-label,
+.settings-appearance .form-row label {
+  width: 84px;                 /* 与 .field-label 基线一致，不再出现 84/88 两种宽度 */
+  flex-shrink: 0;
+  padding-top: 0;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--text);
+}
+/* 分段按钮（主题 / 字号）：统一高度与内边距，消除两档之间的高矮差 */
+.settings-appearance .seg-btn {
+  min-height: 38px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-caption);
+}
+/* 输入框 / 日期框：统一高度与内边距 */
+.settings-appearance .form-row input,
+.settings-appearance .form-row select,
+.settings-appearance .form-inline input[type="date"],
+.settings-appearance .list-input {
+  min-height: 38px;
+  padding: 8px 11px;
+  font-size: var(--font-body);
+}
+/* 按钮（上传图片 / 恢复默认 等）：与输入框同高，视觉对齐 */
+.settings-appearance .form-inline .btn,
+.settings-appearance .btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 壁纸预设色块：统一为正方形，避免与相邻控件高矮不一 */
+.settings-appearance .wall-preset {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+.settings-appearance .wall-presets { gap: 10px; align-items: center; }
+
+/* ==================== 体检 · 移动端响应式加固 ====================
+   目标：手机上卡片不再挤在一起。主流卡片栅格已用 auto-fit / auto-fill 自然回流，
+   这里只补「固定 N 列栅格在手机上过窄」与「极小屏间距」两处。 */
+
+@media (max-width: 768px) {
+  /* 人生卡片统计：原 4 列在手机上每格过窄，改 2 列更易读 */
+  .life-card-stats { grid-template-columns: repeat(2, 1fr); }
+  /* 备份摘要兜底保持 3 列（旧存档可能没吃到 1514 块的覆盖） */
+  .backup-summary { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+  :root { --space-gap: 10px; }
+  #content { padding: 16px 12px 76px; }
+  .card { padding: 15px; }
+  /* 概览 / 统计 / 迷你卡 / 月报 / 年报：小屏保持 2 列，仅收紧间距，避免数字被挤窄 */
+  .overview-grid,
+  .stat-grid,
+  .mini-grid,
+  .month-grid,
+  .year-grid,
+  .backup-summary { gap: 10px; }
+  .stat-num { letter-spacing: -0.01em; }
+  /* 快速入口 4 列在小屏收窄留白，图标 + 短标签仍可读 */
+  .quick-grid { gap: 7px; }
+  .quick-tile { padding: 14px 6px; }
+  .mood-picker-grid { gap: 7px; }
+  .lcs { padding: 8px 2px; }
+  .life-card { padding: 15px; }
+  /* 设置页分组标题在极窄屏不吸顶，避免遮挡首行 */
+  .settings-group-title { position: static; }
+  /* 模态框在小屏更贴边 */
+  .modal-wide { width: 94vw; }
+}
