@@ -137,7 +137,7 @@ function isValidGender(v) {
 const APP_INFO = {
   name: '地球Online',
   enName: 'Earth Online',
-  version: '1.0.0',
+  version: '1.0.1',
   buildDate: '2026-09-27',
   license: 'MIT',
   // 职责分工：二十七 负责数据，Cyou2 负责设计。
