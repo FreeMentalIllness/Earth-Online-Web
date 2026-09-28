@@ -918,17 +918,34 @@ function sanitizeProfile(raw) {
     ? raw.signature.slice(0, PROFILE_LIMITS.signatureMax) : '';
   p.avatarKey = isValidAvatarKey(raw.avatarKey) ? raw.avatarKey : 'default';
   p.avatarData = isValidAvatarData(raw.avatarData) ? raw.avatarData : null;
+  // 自定义字段：支持两种来源，统一归一化为数组（{id,label,value}）
+  //  - Web 内部态 / 裸 state：customFields 数组
+  //  - Android / Windows 导出的 wire 格式：customFieldsJson 字符串
+  // 数组优先；仅当数组缺失时才回落 customFieldsJson（字符串兜底，避免重复合并），解析失败静默丢弃。
+  const cfSources = [];
   if (Array.isArray(raw.customFields)) {
-    raw.customFields.forEach(function (f) {
+    cfSources.push(raw.customFields);
+  } else if (typeof raw.customFieldsJson === 'string' && raw.customFieldsJson) {
+    try {
+      const parsedCf = JSON.parse(raw.customFieldsJson);
+      if (Array.isArray(parsedCf)) cfSources.push(parsedCf);
+    } catch (e) { /* 非标准 JSON：丢弃，不影响导入 */ }
+  }
+  cfSources.forEach(function (cfList) {
+    if (!Array.isArray(cfList)) return;
+    cfList.forEach(function (f) {
       if (p.customFields.length >= PROFILE_LIMITS.customFieldsMax) return; // 截断至 20 条
       if (!f || typeof f !== 'object') return; // 畸形条目剔除
+      const cfLabel = (typeof f.label === 'string' && f.label)
+        ? f.label
+        : (typeof f.name === 'string' ? f.name : '');
       p.customFields.push({
         id: typeof f.id === 'string' && f.id ? f.id : uid('cf'),
-        label: String(f.label || '').slice(0, PROFILE_LIMITS.fieldLabelMax),
-        value: String(f.value || '').slice(0, PROFILE_LIMITS.fieldValueMax),
+        label: String(cfLabel).slice(0, PROFILE_LIMITS.fieldLabelMax),
+        value: String(f.value == null ? '' : f.value).slice(0, PROFILE_LIMITS.fieldValueMax),
       });
     });
-  }
+  });
   return p;
 }
 
