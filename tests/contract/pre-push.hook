@@ -1,0 +1,24 @@
+#!/bin/sh
+# pre-push hook —— 推送前校验跨端 camelCase 契约（仓库内可重装模板）
+# 安装方式（在 EarthOnline-Web 仓库根目录执行）：
+#   cp tests/contract/pre-push.hook .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# 校验失败则阻止推送；本钩子绝不执行任何 git push，也不接受绕过校验的参数。
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT" || exit 1
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "[pre-push] 警告：未检测到 node，跳过契约校验（未阻止推送）"
+  exit 0
+fi
+
+echo "[pre-push] 运行跨端契约校验 tests/contract/validate_backup_contract.js ..."
+node tests/contract/validate_backup_contract.js
+RC=$?
+
+if [ "$RC" -ne 0 ]; then
+  echo "[pre-push] ✗ 契约校验失败，已阻止推送。请修复 tests/contract/ 后重试。"
+  exit 1
+fi
+
+echo "[pre-push] ✓ 契约校验通过，放行推送。"
+exit 0
