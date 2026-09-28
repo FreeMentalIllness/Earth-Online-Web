@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "exportedAt": "2026-09-28T09:00:00.000Z",
+  "profile": {
+    "id": 1,
+    "name": "测试用户",
+    "avatarKey": "default",
+    "gender": "",
+    "country": "",
+    "province": "",
+    "signature": "hello-world",
+    "birthDate": "1995-06-15",
+    "customFieldsJson": "[{\"id\":\"cf1\",\"label\":\"血型\",\"value\":\"O\"},{\"id\":\"cf2\",\"label\":\"身高\",\"value\":\"175\"}]"
+  },
+  "tasks": [
+    { "id": "t1", "title": "主线任务A", "category": "main", "status": "active", "progress": 30, "doneAt": null },
+    { "id": "t2", "title": "支线B", "category": "side", "status": "done", "progress": 100, "doneAt": "2026-09-20T10:00:00.000Z" }
+  ],
+  "memos": [
+    { "id": "m1", "text": "灵感闪念", "type": "idea", "createdAt": "2026-09-21T08:00:00.000Z" }
+  ],
+  "items": [
+    { "id": "i1", "name": "笔记本", "type": "physical", "category": "工具", "createdAt": "2026-09-10" }
+  ],
+  "achievements": [
+    { "id": "a1", "title": "初出茅庐", "desc": "记录第一个足迹", "type": "auto", "autoKey": "footprint_1", "unlocked": true, "unlockedAt": "2026-09-22T12:00:00.000Z", "category": "exploration" }
+  ],
+  "collections": [
+    { "id": "c1", "title": "证件照", "category": "image", "note": "", "fileMetaJson": "{\"name\":\"id.png\",\"mime\":\"image/png\",\"size\":12345}", "fileUri": "content://earth-online/avatar/c1", "createdAt": "2026-09-11" }
+  ],
+  "locations": [
+    { "id": "l1", "name": "家", "lat": 31.2304, "lng": 121.4737, "date": "2026-09-12", "note": "", "tagsJson": "[\"日常\",\"重要\"]" },
+    { "id": "l2", "name": "公司", "lat": 31.2400, "lng": 121.4800, "date": "2026-09-13", "note": "", "tagsJson": "[]" }
+  ],
+  "activities": [
+    { "id": "ac1", "time": "2026-09-22T12:00:00.000Z", "kind": "ach", "title": "初出茅庐" }
+  ]
+}
