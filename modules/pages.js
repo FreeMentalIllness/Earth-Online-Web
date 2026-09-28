@@ -1047,7 +1047,7 @@ function renderBackpack() {
   // 分类 chips：仅「全部」与「收藏夹」两项（v10 简化：自定义分类不再作为顶部 Tab，
   // 仅以卡片徽章显示，可按下方搜索框按名称 / 分类名筛选）
   const chips = ['<button class="tab ' + (backpackTab === 'all' || !backpackTab ? 'active' : '') +
-      '" data-action="backpack-tab" data-tab="all">📦 全部（' + state.items.length + '）</button>']
+      '" data-action="backpack-tab" data-tab="all">📦 物品（' + state.items.length + '）</button>']
     .concat(['<button class="tab ' + (isCollection ? 'active' : '') + '" data-action="backpack-tab" data-tab="collection">⭐ 收藏夹（' + collectionCount + '）</button>'])
     .join('');
 
@@ -1055,7 +1055,7 @@ function renderBackpack() {
   if (isCollection) {
     body = renderCollectionsTab();
   } else {
-    // 全部视图：按搜索词过滤（名称 / 描述 / 分类名），以网格呈现，分类仅作卡片徽章
+    // 物品视图：按搜索词过滤（名称 / 描述 / 分类名），以网格呈现，分类仅作卡片徽章
     let list = state.items.slice();
     if (keyword) {
       list = list.filter(function (i) {
@@ -1066,7 +1066,7 @@ function renderBackpack() {
       });
     }
     body = list.length
-      ? '<div class="item-grid">' + list.map(renderItemCard).join('') + '</div>'
+      ? '<div class="item-grid bp-grid">' + list.map(renderItemCard).join('') + '</div>'
       : (state.items.length
         ? '<div class="card empty">🔍 没有匹配「' + escapeHtml(backpackSearch) + '」的物品</div>'
         : emptyStateHtml('🎒', '背包还是空的',
@@ -1076,7 +1076,9 @@ function renderBackpack() {
 
   const manageBtn = isCollection
     ? ''
-    : '<button class="btn btn-ghost btn-sm" data-action="manage-categories">⚙️ 分类管理</button>';
+    : '<div class="bp-filter-row">' +
+        '<button class="btn btn-ghost btn-sm" data-action="manage-categories">⚙️ 分类管理</button>' +
+      '</div>';
 
   document.getElementById('content').innerHTML =
     '<section class="page">' +
@@ -1112,7 +1114,7 @@ function renderItemCard(item) {
   // item.type 仍留在数据里做兼容，但不再决定界面呈现。
   const cat = (state.itemCategories || []).find(function (c) { return c.id === item.category; });
   return (
-    '<div class="item-card">' +
+    '<div class="item-card bp-card">' +
       '<div class="item-head">' +
         '<span class="badge ' + (cat ? 'badge-cat' : 'badge-none') + '">' + escapeHtml(cat ? cat.name : '未分类') + '</span>' +
         '<span class="task-actions">' +
@@ -1842,12 +1844,12 @@ function renderSettings() {
             '</div>' +
           '</div>' +
           '<div class="form-row"><span class="field-label">壁纸</span>' +
-            '<div class="form-inline">' +
+            '<div class="form-inline wall-row">' +
               '<button class="btn btn-ghost" data-action="wallpaper-upload">🖼️ 上传图片</button>' +
               (wtype !== 'none' ? '<button class="btn btn-ghost" data-action="wallpaper-reset">恢复默认</button>' : '') +
+              '<div class="wall-presets">' + presetBtns + '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="wall-presets">' + presetBtns + '</div>' +
           '<div class="form-row"><span class="field-label">字号</span>' +
             '<div class="seg">' + fsOpts + '</div>' +
           '</div>' +
@@ -1903,8 +1905,8 @@ function renderSettings() {
           '<div class="card-title">🏆 成就解锁提示</div>' +
           '<p class="muted">解锁成就时右下角弹出卡片，并播放一声轻响（音效由代码合成，不加载任何音频文件）。</p>' +
           '<div class="form-row"><span class="field-label">解锁音效</span>' +
-            '<button class="seg-btn' + (on ? ' active' : '') + '" data-action="ach-sound-toggle">' +
-              (on ? '🔔 开' : '🔕 关') + '</button>' +
+            '<button class="switch' + (on ? ' on' : '') + '" data-action="ach-sound-toggle">' +
+              '<span class="switch-text">' + (on ? '开' : '关') + '</span></button>' +
           '</div>' +
         '</div>';
       })() +
@@ -1924,13 +1926,17 @@ function renderSettings() {
           '<div class="card-title">📊 记账</div>' +
           '<p class="muted">记账由 Verifin 提供 —— 一款完全免费 · 开源 · 数据自主的极简记账工具，' +
             '账本只保存在本地。点击下方按钮唤起已安装的 App，未安装会引导你下载。</p>' +
-          '<div class="form-inline">' +
-            '<button class="btn btn-primary" data-action="open-verifin">📊 打开记账</button>' +
-            '<button class="btn btn-ghost" data-action="due-tasks">📅 到期任务提醒</button>' +
+          '<div class="form-row"><span class="field-label">提醒任务到期</span>' +
+            '<div class="form-inline">' +
+              '<button class="btn btn-primary" data-action="open-verifin">📊 打开记账</button>' +
+              '<button class="switch' + (dueNotifyOn ? ' on' : '') + '" data-action="notify-toggle">' +
+                '<span class="switch-text">' + (dueNotifyOn ? '开' : '关') + '</span></button>' +
+            '</div>' +
           '</div>' +
-          '<div class="form-row"><span class="field-label">记账时提醒任务到期</span>' +
-            '<button class="seg-btn' + (dueNotifyOn ? ' active' : '') + '" data-action="notify-toggle">' +
-              (dueNotifyOn ? '🔔 开' : '🔕 关') + '</button>' +
+          '<div class="form-row"><span class="field-label">到期任务提醒</span>' +
+            '<div class="form-inline">' +
+              '<button class="btn btn-ghost" data-action="due-tasks">📅 查看到期任务</button>' +
+            '</div>' +
           '</div>' +
         '</div>';
       })() +

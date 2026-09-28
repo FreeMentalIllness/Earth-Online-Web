@@ -508,14 +508,14 @@ html.is-scrolling .more-panel {
 /* =========================================================
    按钮
    ========================================================= */
-.btn { display: inline-block; padding: 9px 18px; border-radius: var(--radius-control); font-size: var(--font-body); font-weight: 600; transition: var(--transition); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 10px 22px; border-radius: var(--radius-pill); font-size: var(--font-body); font-weight: 600; line-height: 1; transition: var(--transition); }
 .btn-primary { background: var(--amber); color: var(--on-amber); box-shadow: var(--shadow); }
 .btn-primary:hover { background: var(--amber-soft); transform: translateY(-1px); }
 .btn-ghost { border: 1px solid var(--border); background: var(--panel); color: var(--text); }
 .btn-ghost:hover { border-color: var(--amber); color: var(--amber-deep); background: var(--bg-soft); }
 .btn-danger { background: rgba(184, 80, 63, 0.1); color: var(--sem-red); border: 1px solid rgba(184, 80, 63, 0.28); }
 .btn-danger:hover { background: rgba(184, 80, 63, 0.16); }
-.btn-sm { padding: 6px 12px; font-size: var(--font-caption); }
+.btn-sm { min-height: 34px; padding: 6px 14px; font-size: var(--font-caption); }
 
 /* =========================================================
    Tabs
@@ -528,9 +528,20 @@ html.is-scrolling .more-panel {
 /* =========================================================
    背包 / 物品
    ========================================================= */
-.item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-.item-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px 16px; box-shadow: var(--shadow); transition: var(--transition); }
-.item-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+/* ===== 背包 / 收藏 共用：抽公用类，两 Tab 视觉一致 ===== */
+.bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.bp-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow); transition: var(--transition); }
+.bp-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--amber); }
+
+.item-grid, .collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.item-card { padding: 14px 16px; }
+.collection-card { overflow: hidden; cursor: pointer; position: relative; }
+.item-card:hover, .collection-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--amber); }
+
+/* 开关按钮：胶囊形，开态用主题主色，附「开 / 关」文字提示 */
+.switch { display: inline-flex; align-items: center; justify-content: center; min-width: 66px; gap: 6px; padding: 7px 16px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg-soft); color: var(--muted); font-size: var(--font-body); font-weight: 600; cursor: pointer; transition: var(--transition); }
+.switch.on { background: var(--amber); color: var(--on-amber); border-color: transparent; }
+.switch .switch-text { font-size: 13px; letter-spacing: 1px; }
 .item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 6px; }
 .item-name { font-size: var(--font-title3); font-weight: 600; margin-bottom: 5px; color: var(--text-strong); }
 .item-desc { font-size: var(--font-caption); color: var(--muted); margin-bottom: 8px; min-height: 18px; }
@@ -548,23 +559,27 @@ html.is-scrolling .more-panel {
 }
 .cat-chip:hover { border-color: var(--amber); color: var(--amber-deep); }
 .cat-chip.active { background: var(--amber); color: var(--on-amber); border-color: transparent; font-weight: 600; }
-.collection-search {
-  border: 1px solid var(--border);   border-radius: var(--radius-control);
-  padding: 8px 12px; font-size: var(--font-body); outline: none; min-width: 200px;
-  background: var(--bg-soft); color: var(--text); transition: var(--transition);
-}
-.collection-search:focus { border-color: var(--amber); background: var(--panel); }
+
+/* 注：收藏 Tab 已改用 .backpack-search-row + .bp-filter-row（与物品 Tab 对齐）；
+   .collection-toolbar / .cat-chip-row 现由成就页复用，勿删。 */
 
 .backpack-search-row { margin: 2px 0 14px; }
 .backpack-search-row .list-input { width: 100%; flex: none; }
 
-.collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
-.collection-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-card);
-  overflow: hidden; box-shadow: var(--shadow); cursor: pointer; position: relative;
-  transition: var(--transition);
+/* 背包 / 收藏共用：工具行（左 = 动作按钮，右侧 = 可横滑的分类筛选 chips）。
+   两 Tab 因此拥有完全相同的骨架：tabs → 搜索框整行 → 工具行 → 网格。 */
+.bp-filter-row { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
+.bp-filter-row .btn { flex: 0 0 auto; }
+.bp-filter-row .cat-chip-row {
+  flex: 1 1 auto; min-width: 0;
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  padding-bottom: 2px;
 }
-.collection-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--amber); }
+.bp-filter-row .cat-chip-row::-webkit-scrollbar { display: none; }
+.bp-filter-row .cat-chip { flex: 0 0 auto; white-space: nowrap; }
+
+/* 网格与卡片基础已统一到上方 .bp-grid / .bp-card（两 Tab 共用，避免两套冗余样式） */
 .collection-cover { display: block; width: 100%; height: 120px; object-fit: cover; background: var(--bg-soft); }
 .collection-cover-icon {
   display: flex; align-items: center; justify-content: center;
@@ -818,7 +833,7 @@ html.is-scrolling .more-panel {
   .nav { flex-direction: row; flex-wrap: wrap; }
   #content { padding: 18px 14px 40px; }
   .collection-toolbar { flex-direction: column; align-items: stretch; }
-  .collection-search { min-width: 0; width: 100%; }
+  .bp-filter-row { flex-wrap: wrap; }
 }
 
 /* =========================================================
@@ -1932,7 +1947,7 @@ select.auth-input { background-image: none; cursor: pointer; }
 .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
 .seg-btn.active { background: var(--primary); color: var(--on-amber); font-weight: 600; }
 
-.wall-presets { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+.wall-presets { display: flex; gap: 8px; margin: 0; flex-wrap: wrap; align-items: center; }
 .wall-preset {
   width: 46px; height: 46px; border-radius: var(--radius-control);
   border: 2px solid transparent; cursor: pointer; padding: 0;

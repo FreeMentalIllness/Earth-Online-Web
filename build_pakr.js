@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const Babel = require('C:/Users/FMI/.workbuddy/binaries/node/workspace/node_modules/@babel/standalone');
 
-const ROOT = "D:/AI/app/earth-online";
+const ROOT = "D:/AI/app/EarthOnline-Web";
 const FILES = [
   'modules/bus.js',
   'vendor/localforage.min.js',
