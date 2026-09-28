@@ -91,8 +91,10 @@
 
   <!-- 高德地图 JS API（Key + 安全密钥均硬编码，无需用户配置）：
        ① 安全密钥必须在 SDK 脚本加载前通过 window._AMapSecurityConfig 注入（AMap 2.0 读取带下划线的官方字段）；
-       ② 下方 <script src> 预加载 AMap，正常路径下 pages.js 的 ensureAMap 会命中已就绪的全局 AMap 而跳过重复注入；
-       ③ 离线 / Key 失效时地图自动降级为足迹列表，不影响其它功能。 -->
+       ② 下方 <script src> 从「高德 CDN」预加载 AMap，正常路径下 pages.js 的 ensureAMap 会命中已就绪的全局 AMap 而跳过重复注入；
+       ③ 离线 / Key 失效时地图自动降级为足迹列表，不影响其它功能。
+       注意：本脚本是整站唯一的外部资源引用，与「应用代码/资源零本地依赖」并不冲突——
+       地图本身必须联网拉取瓦片，无法彻底离线化；其余 JS/CSS/图标均为本地文件。 -->
   <script>window._AMapSecurityConfig = { securityJsCode: 'd4e92781da1ca5996c246d315af66031' };</script>
   <script src="https://webapi.amap.com/maps?v=2.0&key=07672883965ec7a6f0948813c0a90915"></script>
 

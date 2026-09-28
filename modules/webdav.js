@@ -468,7 +468,7 @@ function webdavRestoreBackup(btn) {
       return;
     }
     if (typeof openConfirm !== 'function') return;
-    openConfirm('将覆盖当前所有本地数据，确定继续？', function () {
+    openConfirm('导入会与当前数据按主键合并（同一条数据以备份为准，本地新增的保留；导入前会自动留一份快照），确定继续？', function () {
       let res2 = null;
       try {
         res2 = applyBackupPayload(obj);
