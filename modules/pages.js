@@ -258,6 +258,70 @@ function renderHome() {
 
   const username = profile.name ? escapeHtml(profile.name) : '地球玩家';
 
+  /* v1.0.2：动态问候 / 连续记录阶段 / 回归鼓励 / 季节徽章 / 累计经验。
+     口径统一走 core.js（与 Android XpRules / GrowthStreak / Greeting / SeasonTheme 一致）。 */
+  const streakDays = (typeof currentStreakDays === 'function') ? currentStreakDays(state) : 0;
+  const greetingText = (typeof greetingBuild === 'function')
+    ? greetingBuild(new Date().getHours(), latestMoodTextOf(state), streakDays) : '';
+  const stageLabel = (typeof streakStageLabel === 'function')
+    ? streakStageLabel((typeof streakStage === 'function') ? streakStage(streakDays) : 0) : '';
+  const comebackText = (typeof comebackMessage === 'function') ? comebackMessage(state) : '';
+  const season = (typeof seasonCurrent === 'function') ? seasonCurrent() : null;
+  const xpTotalNow = (typeof totalXpOf === 'function') ? totalXpOf(state) : 0;
+  const titleText = (typeof xpTitleFor === 'function') ? xpTitleFor(profile.customTitle) : '旅行者';
+
+  /* v1.0.2：今日一签 —— 每天确定性随机展示一条过去的日志/成就（日期做种子，同一天刷新不变）。 */
+  const todayLuck = (function () {
+    const pool = [];
+    (state.memos || []).forEach(function (m) {
+      if (m && m.text) pool.push({ icon: (MEMO_TYPE[m.type] || MEMO_TYPE.idea).emoji, text: String(m.text) });
+    });
+    (state.achievements || []).forEach(function (a) {
+      if (a && a.unlocked && a.title) pool.push({ icon: '🏆', text: '解锁成就「' + String(a.title) + '」' });
+    });
+    if (!pool.length) return null;
+    // 朴素字符串哈希 → 确定性索引（同一天任何时段结果一致）
+    const key = todayStr();
+    let seed = 7;
+    for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) % 2147483647;
+    const pick = pool[seed % pool.length];
+    const t = pick.text.length > 42 ? pick.text.slice(0, 42) + '…' : pick.text;
+    return { icon: pick.icon, text: t };
+  })();
+
+  /* v1.0.2：历年今日 —— 去年今天有记录时，顶部轻量出现回忆卡（日志/任务/足迹）。 */
+  const memoryCardHtml = (function () {
+    const today = todayStr();
+    const lastYearToday = (parseInt(today.slice(0, 4), 10) - 1) + today.slice(4);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lastYearToday)) return '';
+    const rows = [];
+    (state.memos || []).forEach(function (m) {
+      if (m && m.text && localDayOf(m.createdAt) === lastYearToday) {
+        rows.push({ icon: '💭', text: m.text });
+      }
+    });
+    (state.tasks || []).forEach(function (t) {
+      if (t && t.status === 'done' && t.doneAt && localDayOf(t.doneAt) === lastYearToday) {
+        rows.push({ icon: '📋', text: '完成「' + (t.title || '任务') + '」' });
+      }
+    });
+    (state.locations || []).forEach(function (l) {
+      if (l && l.date === lastYearToday) rows.push({ icon: '🗺️', text: '足迹 · ' + (l.name || '') });
+    });
+    if (!rows.length) return '';
+    const shown = rows.slice(0, 4);
+    return '<div class="card memory-card">' +
+      '<div class="card-title">🕰️ 去年的今天 · ' + escapeHtml(lastYearToday) + '</div>' +
+      shown.map(function (r) {
+        const t = r.text.length > 40 ? r.text.slice(0, 40) + '…' : r.text;
+        return '<div class="memory-row"><span class="memory-icon">' + r.icon + '</span>' +
+          '<span>' + escapeHtml(t) + '</span></div>';
+      }).join('') +
+      (rows.length > shown.length ? '<div class="muted memory-more">还有 ' + (rows.length - shown.length) + ' 条当年的记录</div>' : '') +
+      '<div class="muted memory-foot">那天的你留下的东西，今天还在。</div>' +
+    '</div>';
+  })();
+
   /* 1. 顶部角色横幅（左：头像 + 用户名/生日；右：等级信息） */
   const birthText = state.birthDate ? ('🎂 ' + escapeHtml(state.birthDate)) : '🎂 未设置生日';
 
@@ -308,6 +372,8 @@ function renderHome() {
           '<span class="hero-exp-fill" style="transform:scaleX(' +
             (Math.max(0, Math.min(1, stats.progress))).toFixed(4) + ')"></span>' +
         '</div>' +
+        // v1.0.2：累计经验（口径与 Android XpRules 一致，含连续记录加成）
+        '<div class="hero-xp">⚡ 经验 <strong>' + xpTotalNow + '</strong></div>' +
       '</div>' +
     '</div>';
 
@@ -448,18 +514,39 @@ function renderHome() {
       }).join('') + '</div>'
     : '<div class="empty">✧ 还没有重要事件，去完成任务、解锁成就或标记足迹吧~</div>';
 
-  /* 7. 人生卡片（v15 批 C · 第 21 项）：等级 / 成就 / 足迹 / 任务完成率 + 分享 */
+  /* 7. 人生卡片（v15 批 C · 第 21 项）：等级 / 成就 / 足迹 / 任务完成率 + 分享。
+     v1.0.2：展示「称号 · Lv.X」、累计经验与徽章墙（最多佩戴 3 枚已解锁成就）。 */
+  const wornBadges = (function () {
+    const ids = Array.isArray(profile.wornBadges) ? profile.wornBadges : [];
+    return ids.map(function (id) {
+      const a = (typeof getAchievementById === 'function') ? getAchievementById(id) : null;
+      return (a && a.unlocked) ? a : null;
+    }).filter(Boolean).slice(0, 3);
+  })();
+  const wornBadgesHtml = wornBadges.length
+    ? '<div class="life-card-badges">' + wornBadges.map(function (a) {
+        return '<span class="worn-badge" title="' + escapeHtml(a.title) + '">★ ' + escapeHtml(a.title) + '</span>';
+      }).join('') + '</div>'
+    : '';
+  const unlockedAchCount = state.achievements.filter(function (a) { return a && a.unlocked; }).length;
+  const badgeWearBtn = unlockedAchCount
+    ? '<button class="btn btn-ghost btn-sm life-card-badge-btn" data-action="badge-wear">🎖️ 佩戴徽章</button>'
+    : '';
   const lifeCardHtml =
     '<div class="life-card" id="lifeCard">' +
       '<div class="life-card-head">🌍 地球Online · 人生卡片</div>' +
       '<div class="life-card-name">' + username + '</div>' +
+      '<div class="life-card-title">' + escapeHtml(titleText) + ' · Lv.' + stats.age + '</div>' +
       '<div class="life-card-stats">' +
         '<div class="lcs"><b>Lv.' + stats.age + '</b><span>等级</span></div>' +
         '<div class="lcs"><b>' + unlockedAch + '</b><span>成就</span></div>' +
         '<div class="lcs"><b>' + (state.locations || []).length + '</b><span>足迹</span></div>' +
         '<div class="lcs"><b>' + doneRatio + '%</b><span>完成率</span></div>' +
       '</div>' +
+      '<div class="life-card-xp">⚡ 累计经验 <strong>' + xpTotalNow + '</strong> 点</div>' +
+      wornBadgesHtml +
       '<button class="btn btn-ghost btn-sm life-card-share" data-action="life-card-share">📤 分享人生卡片</button>' +
+      badgeWearBtn +
     '</div>';
 
   /* 0b. 右上角「设置」图标按钮。
@@ -474,12 +561,26 @@ function renderHome() {
         'aria-label="设置" title="设置">⚙️</button>' +
     '</div>';
 
-  /* 0. 主页标题栏（v10）：置于角色信息区上方；面板移入标题栏内作为绝对定位锚点 */
+  /* 0. 主页标题栏（v10）：置于角色信息区上方；面板移入标题栏内作为绝对定位锚点。
+     v1.0.2：标题区附当季限定徽章（春樱/夏夜/秋叶/冬雪），标题下方是动态问候语。 */
+  const seasonBadgeHtml = season
+    ? '<span class="season-badge" style="color:' + season.accent + '" title="' + season.label + '限定">' +
+      season.emoji + ' ' + season.label + '</span>'
+    : '';
+  const greetingHtml = greetingText
+    ? '<p class="home-greeting">' + escapeHtml(greetingText) +
+      (stageLabel ? ' <span class="streak-badge">' + escapeHtml(stageLabel) + ' · ' + streakDays + ' 天</span>' : '') +
+      '</p>'
+    : '';
+  const comebackHtml = comebackText
+    ? '<div class="comeback-card">🌱 ' + escapeHtml(comebackText) + '</div>'
+    : '';
   const homeTitle =
     '<div class="home-titlebar">' +
       '<div class="home-title-text">' +
-        '<h1 class="home-title">🌍 地球Online</h1>' +
+        '<h1 class="home-title">🌍 地球Online' + seasonBadgeHtml + '</h1>' +
         '<p class="home-subtitle">人生记录 · 开放世界</p>' +
+        greetingHtml +
       '</div>' +
       morePanelHtml +
     '</div>';
@@ -503,6 +604,8 @@ function renderHome() {
     '<section class="page home-page">' +
       homeTitle +
       homeSearch +
+      memoryCardHtml +
+      comebackHtml +
       banner +
       '<div class="overview-grid">' + overviewCards + '</div>' +
       '<div class="quick-grid">' + quickGrid + '</div>' +
@@ -531,6 +634,15 @@ function renderHome() {
       '</div>' +
 
       lifeCardHtml +
+
+      (todayLuck
+        ? '<div class="card luck-card">' +
+          '<div class="card-title">🔮 今日一签</div>' +
+          '<div class="luck-body"><span class="luck-icon">' + todayLuck.icon + '</span>' +
+          '<span class="luck-text">' + escapeHtml(todayLuck.text) + '</span></div>' +
+          '<div class="muted luck-foot">每天翻开你过去留下的一页，明天再来会是新的一签。</div>' +
+        '</div>'
+        : '') +
 
       '<div class="home-quote">“' + escapeHtml(quote) + '”</div>' +
       '<p class="muted home-foot">提示：出生日期（等级 = 年龄）可在「个人资料」中修改。</p>' +
@@ -707,6 +819,31 @@ function shareLifeCard() {
       toast('生成卡片失败，请截图主页');
     }
   }
+}
+
+/* v1.0.2：徽章墙选择器 —— 从已解锁成就中佩戴最多 3 枚（模态 + 就地刷新） */
+function openBadgeWallModal() {
+  const worn = (getProfile().wornBadges || []).slice();
+  const unlocked = state.achievements.filter(function (a) { return a && a.unlocked && a.title; });
+  const rows = unlocked.length
+    ? unlocked.map(function (a) {
+        const isWorn = worn.indexOf(a.id) !== -1;
+        return '<button class="badge-wall-item' + (isWorn ? ' worn' : '') + '" data-action="badge-toggle" data-id="' +
+          a.id + '" title="' + (isWorn ? '点击摘下' : '点击佩戴') + '">' +
+          '<span class="badge-wall-star">' + (isWorn ? '★' : '☆') + '</span>' +
+          '<span class="badge-wall-title">' + escapeHtml(a.title) + '</span>' +
+          '<span class="badge-wall-state">' + (isWorn ? '已佩戴' : '佩戴') + '</span>' +
+        '</button>';
+      }).join('')
+    : '<div class="empty">还没有已解锁的成就，先去解锁一枚吧~</div>';
+  openModal(
+    '<h3 class="modal-title">🎖️ 佩戴徽章</h3>' +
+    '<p class="modal-text">从已解锁的成就里挑最多 3 枚，佩戴在主页人生卡片上。</p>' +
+    '<div class="badge-wall-list">' + rows + '</div>' +
+    '<div class="modal-actions"><button class="btn btn-ghost" id="badgeWallClose">关闭</button></div>'
+  );
+  const closeBtn = document.getElementById('badgeWallClose');
+  if (closeBtn) closeBtn.onclick = closeModal;
 }
 
 /** 同步麦克风按钮的视觉状态（录音中高亮） */
@@ -1123,7 +1260,10 @@ function renderItemCard(item) {
         '</span>' +
       '</div>' +
       '<div class="item-name">' + escapeHtml(item.name) + '</div>' +
-      '<div class="item-desc">' + escapeHtml(item.description || '—') + '</div>' +
+      // v1.0.2：物品故事卡 —— 有描述时以 📖 书签样式强调展示（物品故事比属性更值得被看见）
+      (item.description
+        ? '<div class="item-desc item-story"><span class="item-story-mark">📖</span>' + escapeHtml(item.description) + '</div>'
+        : '<div class="item-desc">' + escapeHtml(item.description || '—') + '</div>') +
       '<div class="muted item-date">入手时间：' + escapeHtml(item.createdAt) + '</div>' +
     '</div>'
   );
@@ -2569,6 +2709,23 @@ function bindGlobalEvents() {
       case 'life-card-share':
         shareLifeCard();
         break;
+      /* v1.0.2：徽章墙 —— 从已解锁成就中佩戴最多 3 枚 */
+      case 'badge-wear':
+        openBadgeWallModal();
+        break;
+      case 'badge-toggle': {
+        const bid = btn.dataset.id;
+        const worn = (getProfile().wornBadges || []).slice();
+        const idx = worn.indexOf(bid);
+        if (idx !== -1) worn.splice(idx, 1);
+        else {
+          if (worn.length >= 3) { toast('最多佩戴 3 枚徽章，先摘下一枚吧'); break; }
+          worn.push(bid);
+        }
+        updateProfile({ wornBadges: worn });
+        openBadgeWallModal(); // 就地刷新选择态
+        break;
+      }
       case 'goto-profile':
         navigate('profile');
         break;

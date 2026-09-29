@@ -2372,6 +2372,114 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
   .modal-wide { width: 94vw; }
 }
 
+/* ==================== v1.0.2：体验升级（问候 / 连续 / 季节 / 一签 / 回忆 / 徽章墙 / 总结 / 物品故事） ==================== */
+
+/* 季节限定徽章（主页标题区） */
+.season-badge {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  vertical-align: middle;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.9;
+}
+
+/* 动态问候语（标题下方） */
+.home-greeting {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted, #7a7268);
+}
+.streak-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(212, 163, 115, 0.16);
+  color: #8a5a2e;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* 回归鼓励（不惩罚，只邀请） */
+.comeback-card {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(138, 170, 138, 0.14);
+  color: #4c6b4c;
+  font-size: 13px;
+}
+
+/* 主页 hero 经验行 */
+.hero-xp { font-size: 12px; color: var(--muted, #7a7268); margin-top: 4px; }
+.hero-xp strong { color: #8a5a2e; }
+
+/* 历年今日回忆卡 */
+.memory-card { margin: 10px 0; }
+.memory-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; }
+.memory-icon { flex: none; }
+.memory-more, .memory-foot { margin-top: 6px; font-size: 12px; }
+
+/* 今日一签 */
+.luck-card { margin: 10px 0; }
+.luck-body { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 14px; }
+.luck-icon { flex: none; font-size: 18px; }
+.luck-foot { margin-top: 6px; font-size: 12px; }
+
+/* 人生卡片：称号 / 经验 / 徽章墙 */
+.life-card-title {
+  margin: 2px 0 8px;
+  font-size: 13px;
+  color: var(--muted, #7a7268);
+}
+.life-card-xp { font-size: 13px; margin: 8px 0 4px; color: var(--muted, #7a7268); }
+.life-card-xp strong { color: #8a5a2e; }
+.life-card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.worn-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(212, 163, 115, 0.18);
+  color: #8a5a2e;
+  font-size: 12px;
+  font-weight: 600;
+}
+.life-card-badge-btn { margin-top: 6px; }
+
+/* 徽章墙选择器（模态） */
+.badge-wall-list { max-height: 46vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.badge-wall-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border, #e8e2da);
+  background: transparent; cursor: pointer; text-align: left;
+}
+.badge-wall-item.worn { border-color: #d4a373; background: rgba(212, 163, 115, 0.12); }
+.badge-wall-star { flex: none; color: #c49a6c; }
+.badge-wall-title { flex: 1; font-size: 13px; }
+.badge-wall-state { flex: none; font-size: 12px; color: var(--muted, #7a7268); }
+
+/* 数据页：智能总结与经验行 */
+.dash-summary {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted, #7a7268);
+}
+.dash-xp-line strong, .dash-xp-line { color: #8a5a2e; }
+.dash-xp-line { font-weight: 600; }
+
+/* 物品故事卡：📖 书签样式强调 */
+.item-story {
+  display: flex; gap: 6px; align-items: baseline;
+  border-left: 3px solid #d4a373;
+  padding-left: 8px;
+  color: #5b4a36;
+}
+.item-story-mark { flex: none; }
+
 </style>
 <script>window._AMapSecurityConfig = { securityJsCode: "d4e92781da1ca5996c246d315af66031" };</script>
 <script src="https://webapi.amap.com/maps?v=2.0&key=07672883965ec7a6f0948813c0a90915"></script>
@@ -4404,8 +4512,8 @@ var backpackTab = 'all';
   var APP_INFO = {
     name: '地球Online',
     enName: 'Earth Online',
-    version: '1.0.1',
-    buildDate: '2026-09-27',
+    version: '1.0.2',
+    buildDate: '2026-09-29',
     license: 'MIT',
     // 职责分工：二十七 负责数据，Cyou2 负责设计。
     developers: [{
@@ -4420,6 +4528,8 @@ var backpackTab = 'all';
       name: '海神唐三'
     }, {
       name: 'Seastar'
+    }, {
+      name: '清浅'
     }],
     repo: '地球Online · 人生记录'
   };
@@ -4467,6 +4577,10 @@ var backpackTab = 'all';
    * 0.9.x 预览版，历史保留但不占正式版本号。
    */
   var CHANGELOG = [{
+    version: '1.0.2',
+    date: '2026-09-29',
+    items: ['经验规则统一（同步 Android v1.0.3）：任务/成就/日志/足迹/物品/照片六类来源收口为单一函数，连续记录另有加成', '动态问候语：主页按时间段切换问候，感知最近心情追加关怀句，连续记录满 3 天附认可', '连续记录成长：3/7/21/60 天四阶段（萌芽/抽枝/繁茂/参天）徽标，今天未记录给宽限不清零，断更只鼓励回归', '报告智能总结：数据页日报/周报/月报/年报总结文案更有人味，空数据不打击', '主页新增「今日一签」（每天确定性随机翻出一条过去）与「历年今日」回忆卡', '季节限定徽章：主页标题区按当季展示春樱/夏夜/秋叶/冬雪徽章；物品描述改📖书签样式强调']
+  }, {
     version: '1.0.1',
     date: '2026-09-27',
     items: ['记账入口跳转容错（Android）：打开下载链接时若本机没有可用浏览器，只弹提示不再闪退', '修复 Android 11+ 包可见性（Android）：补全 <queries> 声明，避免「有浏览器」被误判为「没浏览器」导致链接打不开', '任务状态选项排版修正（Android）：「已完成」等状态改为横向等宽对齐，不再因宽度溢出折成两行']
@@ -4609,6 +4723,238 @@ var backpackTab = 'all';
     return Math.min(100, Math.max(0, Math.round(n)));
   }
 
+  /* ==================== XP / 连续记录 / 问候 / 季节（v1.0.2 · 口径与 Android XpRules/GrowthStreak/Greeting/SeasonTheme 完全一致） ====================
+   * 唯一口径原则：所有展示 XP / 连续天数 / 问候语 / 季节的地方一律调用这里，
+   * 不要再手写乘加表达式 —— 以前多个页面各写一份，改规则要改多处。
+   * Web 端没有记忆相册，photos 恒传 0（XpRules 允许缺省来源传 0）。 */
+
+  /** 经验来源分值表（与 Android XpRules 常量一一对应） */
+  var XP_RULES = {
+    TASK_DONE: 10,
+    // 每完成一个任务
+    ACHIEVEMENT: 50,
+    // 每解锁一个成就
+    MEMO: 5,
+    // 每条世界日志
+    LOCATION: 8,
+    // 每处足迹
+    ITEM: 3,
+    // 背包每拾取一件物品
+    PHOTO: 2 // 记忆相册每导入一张照片（Web 端暂无相册，恒为 0）
+  };
+
+  /** 累计经验总值（纯函数，所有端共用这一个口径）。缺省来源允许传 0。 */
+  function xpTotal(tasksDone, achievements, memos, locations, items, photos) {
+    var n = function n(v) {
+      var x = Number(v);
+      return isFinite(x) && x > 0 ? Math.floor(x) : 0;
+    };
+    return n(tasksDone) * XP_RULES.TASK_DONE + n(achievements) * XP_RULES.ACHIEVEMENT + n(memos) * XP_RULES.MEMO + n(locations) * XP_RULES.LOCATION + n(items) * XP_RULES.ITEM + n(photos) * XP_RULES.PHOTO;
+  }
+
+  /** 连续记录加成：坚持本身就有价值，3 天就有第一笔奖励，别让用户等到一周之后。 */
+  function xpStreakBonus(streakDays) {
+    var d = Number(streakDays) || 0;
+    if (d >= 60) return 120;
+    if (d >= 30) return 50;
+    if (d >= 14) return 30;
+    if (d >= 7) return 20;
+    if (d >= 3) return 5;
+    return 0;
+  }
+
+  /** 等级称号：不搞花哨命名 —— 用户没自定义时一律「旅行者」，自定义过则完全以用户的为准。 */
+  var XP_DEFAULT_TITLE = '旅行者';
+
+  /** 自定义称号清洗：trim、截 12 字、空白回退默认 */
+  function xpTitleFor(custom) {
+    var t = String(custom == null ? '' : custom).trim().slice(0, 12);
+    return t || XP_DEFAULT_TITLE;
+  }
+
+  /** 某存档的「有记录的日子」集合（世界日志 + 任务完成 + 足迹；与 Android GrowthStreak 口径一致，收藏不计） */
+  function recordedDayKeys(st) {
+    var s = st || state || {};
+    var seen = {};
+    var push = function push(v) {
+      var d = dayKeyOf(v);
+      if (d) seen[d] = 1;
+    };
+    (Array.isArray(s.memos) ? s.memos : []).forEach(function (m) {
+      if (m) push(m.createdAt);
+    });
+    (Array.isArray(s.tasks) ? s.tasks : []).forEach(function (t) {
+      if (t && t.doneAt) push(t.doneAt);
+    });
+    (Array.isArray(s.locations) ? s.locations : []).forEach(function (l) {
+      if (l && l.date) push(l.date);
+    });
+    return Object.keys(seen).sort();
+  }
+
+  /** 当前连续记录天数。今天没有记录时从昨天起算（今天还没过完，不算断 —— 宽限今天）。 */
+  function currentStreakDays(st) {
+    var keys = recordedDayKeys(st);
+    if (!keys.length) return 0;
+    var set = {};
+    keys.forEach(function (k) {
+      set[k] = 1;
+    });
+    var today = todayStr();
+    var cursor = set[today] ? parseDateStr(today) : addDays(parseDateStr(today), -1);
+    var streak = 0;
+    while (set[todayStr(cursor)]) {
+      streak++;
+      cursor = addDays(cursor, -1);
+    }
+    return streak;
+  }
+
+  /** 生长阶段：0 无记录 · 1 萌芽(≥3) · 2 抽枝(≥7) · 3 繁茂(≥21) · 4 参天(≥60)。阈值刻意低。 */
+  function streakStage(streakDays) {
+    var d = Number(streakDays) || 0;
+    if (d >= 60) return 4;
+    if (d >= 21) return 3;
+    if (d >= 7) return 2;
+    if (d >= 3) return 1;
+    return 0;
+  }
+
+  /** 阶段名（主页徽标展示） */
+  function streakStageLabel(stage) {
+    switch (Number(stage) || 0) {
+      case 4:
+        return '参天 🌳';
+      case 3:
+        return '繁茂 🌿';
+      case 2:
+        return '抽枝 ✨';
+      case 1:
+        return '萌芽 🌱';
+      default:
+        return '';
+    }
+  }
+
+  /** 回归鼓励语（不惩罚）：距上次记录已断 ≥2 天时给一句温和的邀请；从未记录或未断更返回 '' */
+  function comebackMessage(st) {
+    var keys = recordedDayKeys(st);
+    if (!keys.length) return '';
+    var last = keys[keys.length - 1];
+    var gap = daysBetween(parseDateStr(last), parseDateStr(todayStr()));
+    if (!isFinite(gap) || gap < 2) return '';
+    return '有 ' + gap + ' 天没写日记了。回来继续，你的星球一直在。';
+  }
+
+  /** 某存档的累计经验（含连续记录加成）。所有 XP 展示处的唯一入口。 */
+  function totalXpOf(st) {
+    var s = st || state || {};
+    var arr = function arr(v) {
+      return Array.isArray(v) ? v : [];
+    };
+    var tasksDone = arr(s.tasks).filter(function (t) {
+      return t && t.status === 'done';
+    }).length;
+    var achs = arr(s.achievements).filter(function (a) {
+      return a && a.unlocked;
+    }).length;
+    var streak = currentStreakDays(s);
+    return xpTotal(tasksDone, achs, arr(s.memos).length, arr(s.locations).length, arr(s.items).length, 0) + xpStreakBonus(streak);
+  }
+
+  /* ---------- 动态问候语（v1.0.2，与 Android Greeting.kt 同一份文案口径） ---------- */
+
+  /** 心情关怀句：最近心情带着累/雨/低落等词时，多一句关心（正面心情不画蛇添足） */
+  function greetingMoodCareLine(moodText) {
+    var t = String(moodText == null ? '' : moodText).trim();
+    if (!t) return '';
+    var lowKeyWords = ['累', '烦', '低落', '难过', '焦虑', '压力', 'emo', '丧', '哭', '失眠'];
+    var rainWords = ['雨', '阴', '降温'];
+    var hit = false;
+    var i;
+    for (i = 0; i < lowKeyWords.length; i++) {
+      if (t.indexOf(lowKeyWords[i]) !== -1) {
+        hit = true;
+        break;
+      }
+    }
+    if (hit) return '无论晴雨，你的记录都在';
+    for (i = 0; i < rainWords.length; i++) {
+      if (t.indexOf(rainWords[i]) !== -1) return '外面天气一般，愿心里有光';
+    }
+    return '';
+  }
+
+  /**
+   * 组装问候语：时段问候 · 心情关怀 · 连续认可。
+   * @param {number} hour 当前小时 0-23
+   * @param {string|null} latestMoodText 最近一条「心情」类日志文本（可为空）
+   * @param {number} streakDays 连续记录天数（≥3 时附认可）
+   */
+  function greetingBuild(hour, latestMoodText, streakDays) {
+    var h = Number(hour);
+    var base;
+    if (h >= 0 && h <= 4) base = '夜深了，早点休息';else if (h <= 8) base = '早上好，新的一天开始了';else if (h <= 11) base = '上午好，今天想推进点什么？';else if (h <= 13) base = '午安，记得吃口饭';else if (h <= 17) base = '下午好，慢慢来也可以';else if (h <= 22) base = '晚上好，今天辛苦了';else base = '夜深了，今天辛苦了';
+    var parts = [base];
+    var moodLine = greetingMoodCareLine(latestMoodText);
+    if (moodLine) parts.push(moodLine);
+    var d = Number(streakDays) || 0;
+    if (d >= 3) parts.push('已连续记录 ' + d + ' 天 🔥');
+    return parts.join(' · ');
+  }
+
+  /** 最近一条「心情」类日志文本（无则 ''） */
+  function latestMoodTextOf(st) {
+    var s = st || state || {};
+    var latest = null;
+    (Array.isArray(s.memos) ? s.memos : []).forEach(function (m) {
+      if (m && m.type === 'mood' && m.text) {
+        if (!latest || String(m.createdAt || '') > String(latest.createdAt)) latest = m;
+      }
+    });
+    return latest ? String(latest.text || '') : '';
+  }
+
+  /* ---------- 季节限定（v1.0.2，与 Android SeasonTheme.kt 同一切分：立春 2/4、立夏 5/5、立秋 8/7、立冬 11/7） ---------- */
+
+  var SEASONS = [{
+    id: 'spring',
+    label: '春樱季',
+    emoji: '🌸',
+    accent: '#d98ba4'
+  }, {
+    id: 'summer',
+    label: '夏夜季',
+    emoji: '🌙',
+    accent: '#6e9bc5'
+  }, {
+    id: 'autumn',
+    label: '秋叶季',
+    emoji: '🍂',
+    accent: '#c97b3d'
+  }, {
+    id: 'winter',
+    label: '冬雪季',
+    emoji: '❄️',
+    accent: '#8faec4'
+  }];
+
+  /** 按四立节气近似切分的当季（month1based：1-12） */
+  function seasonOf(month1based, day) {
+    var m = Number(month1based),
+      d = Number(day);
+    if (m === 2 && d >= 4 || m >= 3 && m <= 4 || m === 5 && d < 5) return SEASONS[0];
+    if (m === 5 && d >= 5 || m >= 6 && m <= 7 || m === 8 && d < 7) return SEASONS[1];
+    if (m === 8 && d >= 7 || m >= 9 && m <= 10 || m === 11 && d < 7) return SEASONS[2];
+    return SEASONS[3];
+  }
+
+  /** 今天当季 */
+  function seasonCurrent() {
+    var now = new Date();
+    return seasonOf(now.getMonth() + 1, now.getDate());
+  }
+
   /* ==================== 等级 / 生日计算 ==================== */
 
   /** 计算周岁年龄（等级 = 年龄，一年一级） */
@@ -4700,6 +5046,10 @@ var backpackTab = 'all';
       province: '',
       // v19 新增：区服-省份（CHINA_PROVINCES）
       signature: '',
+      customTitle: '',
+      // v1.0.2：自定义称号（空 = 用默认「旅行者」，展示走 xpTitleFor）
+      wornBadges: [],
+      // v1.0.2：徽章墙 —— 从已解锁成就中佩戴的成就 id，最多 3 枚
       customFields: [] // 有序数组，渲染顺序 = 用户排列顺序，上限 20 条
     };
   }
@@ -5176,19 +5526,40 @@ var backpackTab = 'all';
     p.country = typeof raw.country === 'string' ? raw.country.slice(0, 30) : '';
     p.province = typeof raw.province === 'string' ? raw.province.slice(0, 30) : '';
     p.signature = typeof raw.signature === 'string' ? raw.signature.slice(0, PROFILE_LIMITS.signatureMax) : '';
+    // v1.0.2：自定义称号（≤12 字，展示清洗走 xpTitleFor；存原始值，空表示用默认）
+    p.customTitle = typeof raw.customTitle === 'string' ? raw.customTitle.slice(0, 12) : '';
+    // v1.0.2：徽章墙（已解锁成就 id 数组，最多 3 枚；畸形项与非字符串剔除，超限截断）
+    p.wornBadges = (Array.isArray(raw.wornBadges) ? raw.wornBadges : []).filter(function (id) {
+      return typeof id === 'string' && id;
+    }).slice(0, 3);
     p.avatarKey = isValidAvatarKey(raw.avatarKey) ? raw.avatarKey : 'default';
     p.avatarData = isValidAvatarData(raw.avatarData) ? raw.avatarData : null;
+    // 自定义字段：支持两种来源，统一归一化为数组（{id,label,value}）
+    //  - Web 内部态 / 裸 state：customFields 数组
+    //  - Android / Windows 导出的 wire 格式：customFieldsJson 字符串
+    // 数组优先；仅当数组缺失时才回落 customFieldsJson（字符串兜底，避免重复合并），解析失败静默丢弃。
+    var cfSources = [];
     if (Array.isArray(raw.customFields)) {
-      raw.customFields.forEach(function (f) {
+      cfSources.push(raw.customFields);
+    } else if (typeof raw.customFieldsJson === 'string' && raw.customFieldsJson) {
+      try {
+        var parsedCf = JSON.parse(raw.customFieldsJson);
+        if (Array.isArray(parsedCf)) cfSources.push(parsedCf);
+      } catch (e) {/* 非标准 JSON：丢弃，不影响导入 */}
+    }
+    cfSources.forEach(function (cfList) {
+      if (!Array.isArray(cfList)) return;
+      cfList.forEach(function (f) {
         if (p.customFields.length >= PROFILE_LIMITS.customFieldsMax) return; // 截断至 20 条
         if (!f || _typeof(f) !== 'object') return; // 畸形条目剔除
+        var cfLabel = typeof f.label === 'string' && f.label ? f.label : typeof f.name === 'string' ? f.name : '';
         p.customFields.push({
           id: typeof f.id === 'string' && f.id ? f.id : uid('cf'),
-          label: String(f.label || '').slice(0, PROFILE_LIMITS.fieldLabelMax),
-          value: String(f.value || '').slice(0, PROFILE_LIMITS.fieldValueMax)
+          label: String(cfLabel).slice(0, PROFILE_LIMITS.fieldLabelMax),
+          value: String(f.value == null ? '' : f.value).slice(0, PROFILE_LIMITS.fieldValueMax)
         });
       });
-    }
+    });
     return p;
   }
 
@@ -5858,6 +6229,15 @@ var backpackTab = 'all';
     }
     if (data.signature !== undefined) {
       p.signature = String(data.signature).slice(0, PROFILE_LIMITS.signatureMax);
+    }
+    // v1.0.2：自定义称号与徽章墙
+    if (data.customTitle !== undefined) {
+      p.customTitle = String(data.customTitle == null ? '' : data.customTitle).trim().slice(0, 12);
+    }
+    if (data.wornBadges !== undefined) {
+      p.wornBadges = (Array.isArray(data.wornBadges) ? data.wornBadges : []).filter(function (id) {
+        return typeof id === 'string' && id;
+      }).slice(0, 3);
     }
     if (data.country !== undefined) {
       p.country = String(data.country).trim().slice(0, 30);
@@ -6647,6 +7027,76 @@ var backpackTab = 'all';
   E.ensureModule = ensureModule;
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.ensureModule === "undefined") globalThis.ensureModule = ensureModule;
+  } catch (e) {}
+
+  /* v1.0.2：XP / 连续记录 / 问候 / 季节（口径与 Android 一致，被各页面模块裸调） */
+  E.XP_RULES = XP_RULES;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.XP_RULES === "undefined") globalThis.XP_RULES = XP_RULES;
+  } catch (e) {}
+  E.xpTotal = xpTotal;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.xpTotal === "undefined") globalThis.xpTotal = xpTotal;
+  } catch (e) {}
+  E.xpStreakBonus = xpStreakBonus;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.xpStreakBonus === "undefined") globalThis.xpStreakBonus = xpStreakBonus;
+  } catch (e) {}
+  E.XP_DEFAULT_TITLE = XP_DEFAULT_TITLE;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.XP_DEFAULT_TITLE === "undefined") globalThis.XP_DEFAULT_TITLE = XP_DEFAULT_TITLE;
+  } catch (e) {}
+  E.xpTitleFor = xpTitleFor;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.xpTitleFor === "undefined") globalThis.xpTitleFor = xpTitleFor;
+  } catch (e) {}
+  E.recordedDayKeys = recordedDayKeys;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.recordedDayKeys === "undefined") globalThis.recordedDayKeys = recordedDayKeys;
+  } catch (e) {}
+  E.currentStreakDays = currentStreakDays;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.currentStreakDays === "undefined") globalThis.currentStreakDays = currentStreakDays;
+  } catch (e) {}
+  E.streakStage = streakStage;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.streakStage === "undefined") globalThis.streakStage = streakStage;
+  } catch (e) {}
+  E.streakStageLabel = streakStageLabel;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.streakStageLabel === "undefined") globalThis.streakStageLabel = streakStageLabel;
+  } catch (e) {}
+  E.comebackMessage = comebackMessage;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.comebackMessage === "undefined") globalThis.comebackMessage = comebackMessage;
+  } catch (e) {}
+  E.totalXpOf = totalXpOf;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.totalXpOf === "undefined") globalThis.totalXpOf = totalXpOf;
+  } catch (e) {}
+  E.greetingBuild = greetingBuild;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.greetingBuild === "undefined") globalThis.greetingBuild = greetingBuild;
+  } catch (e) {}
+  E.greetingMoodCareLine = greetingMoodCareLine;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.greetingMoodCareLine === "undefined") globalThis.greetingMoodCareLine = greetingMoodCareLine;
+  } catch (e) {}
+  E.latestMoodTextOf = latestMoodTextOf;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.latestMoodTextOf === "undefined") globalThis.latestMoodTextOf = latestMoodTextOf;
+  } catch (e) {}
+  E.SEASONS = SEASONS;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.SEASONS === "undefined") globalThis.SEASONS = SEASONS;
+  } catch (e) {}
+  E.seasonOf = seasonOf;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.seasonOf === "undefined") globalThis.seasonOf = seasonOf;
+  } catch (e) {}
+  E.seasonCurrent = seasonCurrent;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.seasonCurrent === "undefined") globalThis.seasonCurrent = seasonCurrent;
   } catch (e) {}
 })();
 /* ===== modules/achievements.js ===== */
@@ -7829,8 +8279,11 @@ var backpackTab = 'all';
       country: p.country,
       province: p.province,
       signature: p.signature,
+      customTitle: p.customTitle || '',
       birthDate: state.birthDate
     };
+    // v1.0.2：称号展示口径与 Android XpRules.titleFor 一致（未自定义 → 「旅行者」）
+    var titleText = typeof xpTitleFor === 'function' ? xpTitleFor(draft.customTitle) : String(draft.customTitle || '旅行者');
     var avatar = currentAvatar();
     var avatarCells = BUILTIN_AVATARS.map(function (a) {
       return '<button type="button" class="avatar-cell ' + (avatar.key === a.key ? 'selected' : '') + '" data-action="profile-avatar-select" data-key="' + a.key + '" title="' + a.label + '">' + a.emoji + '</button>';
@@ -7852,7 +8305,7 @@ var backpackTab = 'all';
     var fieldRows = p.customFields.length ? p.customFields.map(function (f) {
       return '<div class="list-row">' + '<span class="field-label">' + escapeHtml(f.label) + '</span>' + '<span class="field-value">' + (f.value ? escapeHtml(f.value) : '<span class="muted">—</span>') + '</span>' + '<span class="task-actions">' + '<button class="icon-btn" data-action="profile-field-edit" data-id="' + f.id + '">编辑</button>' + '<button class="icon-btn danger" data-action="profile-field-delete" data-id="' + f.id + '">删除</button>' + '</span>' + '</div>';
     }).join('') : '<div class="empty">还没有自定义字段，点右上角「+ 添加字段」</div>';
-    document.getElementById('content').innerHTML = '<section class="page narrow">' + '<div class="page-head">' + '<h2 class="page-title">个人资料</h2>' + '<button class="btn btn-primary" data-action="profile-save">保存资料</button>' + '</div>' + '<div class="profile-user-card">' + '<span class="avatar-circle avatar-circle-lg" id="profileAvatarPreview">' + buildAvatarInner(avatar.data, avatar.key) + '</span>' + '<div class="profile-user-body">' + '<div class="profile-user-name">' + (draft.name ? escapeHtml(draft.name) : '<span class="muted">未命名玩家</span>') + ' <span class="badge badge-level">Lv.' + stats.age + '</span></div>' + '<div class="muted profile-user-sign">' + (draft.signature ? escapeHtml(draft.signature) : '还没有签名，写一句话介绍自己吧') + '</div>' + '</div>' + '</div>' + '<div class="card">' + '<div class="card-title">基础信息</div>' + '<div class="list-group">' + '<div class="list-row">' + '<label class="field-label" for="profileName">姓名</label>' + '<input id="profileName" class="list-input" placeholder="怎么称呼你？" maxlength="30" value="' + escapeHtml(draft.name) + '">' + '</div>' + '<div class="list-row list-row-col">' + '<span class="field-label">头像</span>' + '<div class="avatar-grid">' + avatarCells + '</div>' + '<button type="button" class="btn btn-ghost btn-sm" data-action="profile-avatar-upload">' + '上传本地图片（≤100KB）</button>' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileGender">性别</label>' + '<select id="profileGender" class="list-input">' + genderOptions + '</select>' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileCountry">区服</label>' + '<select id="profileCountry" class="list-input">' + regionCountryOptions + '</select>' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileProvince">' + (regionIsChina ? '省份' : '州 / 省') + '</label>' + regionProvinceField + '</div>' + '<div class="list-row list-row-col">' + '<label class="field-label" for="profileBirth">出生</label>' + renderBirthPicker(draft.birthDate || state.birthDate || '') + '<span class="muted">等级 = 年龄，保存后主页等级实时联动。' + '可直接在日历里选，也可用下方下拉分别指定年 / 月 / 日（改月份会自动修正天数，如 2 月不会有 31 日）。</span>' + '</div>' + '<div class="list-row list-row-col">' + '<label class="field-label" for="profileSignature">角色签名</label>' + '<textarea id="profileSignature" class="list-textarea" maxlength="200" ' + 'placeholder="一句话介绍自己（≤200 字）">' + escapeHtml(draft.signature) + '</textarea>' + '</div>' + '</div>' + '<div class="form-error" id="profileFormError"></div>' + '</div>' + '<div class="card">' + '<div class="card-head-with-btn">' + '<div class="card-title">自定义字段</div>' + '<button class="btn btn-ghost btn-sm" data-action="profile-field-add">+ 添加字段</button>' + '</div>' + '<div class="list-group">' + fieldRows + '</div>' + '<p class="muted">字段按添加顺序展示，上限 20 条；名称 ≤30 字，内容 ≤200 字。</p>' + '</div>' + '</section>';
+    document.getElementById('content').innerHTML = '<section class="page narrow">' + '<div class="page-head">' + '<h2 class="page-title">个人资料</h2>' + '<button class="btn btn-primary" data-action="profile-save">保存资料</button>' + '</div>' + '<div class="profile-user-card">' + '<span class="avatar-circle avatar-circle-lg" id="profileAvatarPreview">' + buildAvatarInner(avatar.data, avatar.key) + '</span>' + '<div class="profile-user-body">' + '<div class="profile-user-name">' + (draft.name ? escapeHtml(draft.name) : '<span class="muted">未命名玩家</span>') + ' <span class="badge badge-level">' + escapeHtml(titleText) + ' · Lv.' + stats.age + '</span></div>' + '<div class="muted profile-user-sign">' + (draft.signature ? escapeHtml(draft.signature) : '还没有签名，写一句话介绍自己吧') + '</div>' + '</div>' + '</div>' + '<div class="card">' + '<div class="card-title">基础信息</div>' + '<div class="list-group">' + '<div class="list-row">' + '<label class="field-label" for="profileName">姓名</label>' + '<input id="profileName" class="list-input" placeholder="怎么称呼你？" maxlength="30" value="' + escapeHtml(draft.name) + '">' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileTitle">称号</label>' + '<input id="profileTitle" class="list-input" placeholder="留空显示「旅行者」" maxlength="12" value="' + escapeHtml(draft.customTitle || '') + '">' + '</div>' + '<div class="list-row list-row-col">' + '<span class="field-label">头像</span>' + '<div class="avatar-grid">' + avatarCells + '</div>' + '<button type="button" class="btn btn-ghost btn-sm" data-action="profile-avatar-upload">' + '上传本地图片（≤100KB）</button>' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileGender">性别</label>' + '<select id="profileGender" class="list-input">' + genderOptions + '</select>' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileCountry">区服</label>' + '<select id="profileCountry" class="list-input">' + regionCountryOptions + '</select>' + '</div>' + '<div class="list-row">' + '<label class="field-label" for="profileProvince">' + (regionIsChina ? '省份' : '州 / 省') + '</label>' + regionProvinceField + '</div>' + '<div class="list-row list-row-col">' + '<label class="field-label" for="profileBirth">出生</label>' + renderBirthPicker(draft.birthDate || state.birthDate || '') + '<span class="muted">等级 = 年龄，保存后主页等级实时联动。' + '可直接在日历里选，也可用下方下拉分别指定年 / 月 / 日（改月份会自动修正天数，如 2 月不会有 31 日）。</span>' + '</div>' + '<div class="list-row list-row-col">' + '<label class="field-label" for="profileSignature">角色签名</label>' + '<textarea id="profileSignature" class="list-textarea" maxlength="200" ' + 'placeholder="一句话介绍自己（≤200 字）">' + escapeHtml(draft.signature) + '</textarea>' + '</div>' + '</div>' + '<div class="form-error" id="profileFormError"></div>' + '</div>' + '<div class="card">' + '<div class="card-head-with-btn">' + '<div class="card-title">自定义字段</div>' + '<button class="btn btn-ghost btn-sm" data-action="profile-field-add">+ 添加字段</button>' + '</div>' + '<div class="list-group">' + fieldRows + '</div>' + '<p class="muted">字段按添加顺序展示，上限 20 条；名称 ≤30 字，内容 ≤200 字。</p>' + '</div>' + '</section>';
     syncSidebarAvatar();
 
     // v19：区服-国家 change 联动省份控件（change 事件不走全局 click 分发，就地绑定；
@@ -7891,13 +8344,15 @@ var backpackTab = 'all';
     var signEl = document.getElementById('profileSignature');
     var countryEl = document.getElementById('profileCountry');
     var provinceEl = document.getElementById('profileProvince');
+    var titleEl = document.getElementById('profileTitle');
     profileFormDraft = {
       name: nameEl.value,
       gender: genderEl ? genderEl.value : '',
       signature: signEl ? signEl.value : '',
       birthDate: birthEl.value,
       country: countryEl ? countryEl.value : '',
-      province: provinceEl ? provinceEl.value : ''
+      province: provinceEl ? provinceEl.value : '',
+      customTitle: titleEl ? titleEl.value : ''
     };
   }
 
@@ -8078,6 +8533,7 @@ var backpackTab = 'all';
     var birth = val('profileBirth');
     var country = val('profileCountry');
     var province = val('profileProvince');
+    var customTitle = val('profileTitle').trim();
     var birthResult = setBirthDate(birth);
     if (!birthResult.ok) {
       fail(birthResult.error); // 行内红字，不弹 alert，整表阻止保存
@@ -8088,7 +8544,8 @@ var backpackTab = 'all';
       gender: gender,
       signature: signature,
       country: country,
-      province: province
+      province: province,
+      customTitle: customTitle
     };
     if (profileAvatarDataDraft != null) {
       patch.avatarData = profileAvatarDataDraft;
@@ -10184,7 +10641,7 @@ var backpackTab = 'all';
         return;
       }
       if (typeof openConfirm !== 'function') return;
-      openConfirm('将覆盖当前所有本地数据，确定继续？', function () {
+      openConfirm('导入会与当前数据按主键合并（同一条数据以备份为准，本地新增的保留；导入前会自动留一份快照），确定继续？', function () {
         var res2 = null;
         try {
           res2 = applyBackupPayload(obj);
@@ -10797,6 +11254,177 @@ var backpackTab = 'all';
     };
   }
 
+  /* ==================== v1.0.2：报告智能总结（语气与 Android ReportViewModel 的 day/week/yearSummary 一致） ==================== */
+
+  /**
+   * 收集 [fromDay, toDay] 内的「事件」（灵感 / 完成任务 / 解锁成就 / 足迹）。
+   * @returns {{day:string, hour:number, kind:string, text:string}[]}
+   */
+  function collectEvents(startDay, endDay) {
+    var out = [];
+    var inR = function inR(k) {
+      return inDayRange(k, startDay, endDay);
+    };
+    dashArr(state && state.memos).forEach(function (m) {
+      if (!m) return;
+      var k = dayKeyOf(m.createdAt);
+      if (inR(k)) out.push({
+        day: k,
+        hour: localHourOf(m.createdAt),
+        kind: 'memo',
+        text: String(m.text || '')
+      });
+    });
+    dashArr(state && state.tasks).forEach(function (t) {
+      if (!t || !t.doneAt) return;
+      var k = dayKeyOf(t.doneAt);
+      if (inR(k)) out.push({
+        day: k,
+        hour: localHourOf(t.doneAt),
+        kind: 'task',
+        text: String(t.title || '')
+      });
+    });
+    dashArr(state && state.achievements).forEach(function (a) {
+      if (!a || !a.unlocked) return;
+      var k = dayKeyOf(a.unlockedAt);
+      if (inR(k)) out.push({
+        day: k,
+        hour: localHourOf(a.unlockedAt),
+        kind: 'ach',
+        text: String(a.title || '')
+      });
+    });
+    dashArr(state && state.locations).forEach(function (l) {
+      if (!l || !l.date) return;
+      var k = dayKeyOf(l.date);
+      if (inR(k)) out.push({
+        day: k,
+        hour: -1,
+        kind: 'loc',
+        text: String(l.name || '')
+      });
+    });
+    return out;
+  }
+
+  /** ISO 时间 → 本地小时；非法返回 -1（QA 桩环境 new Date(iso) 可能解析失败，绝不抛异常） */
+  function localHourOf(v) {
+    try {
+      if (!v) return -1;
+      var d = new Date(v);
+      if (isNaN(d.getTime())) return -1;
+      return d.getHours();
+    } catch (e) {
+      return -1;
+    }
+  }
+
+  /**
+   * 日报总结（今天）：挑一个峰值时段说人话，全空时给一句不打击人的话。
+   * 语气与 Android ReportViewModel.daySummary 完全一致。
+   */
+  function buildDaySummaryText() {
+    var today = todayStr();
+    var events = collectEvents(today, today);
+    if (!events.length) return '今天还没有任何记录。写下第一条世界日志，就算开局了。';
+    var buckets = new Array(24);
+    for (var i = 0; i < 24; i++) buckets[i] = 0;
+    events.forEach(function (e) {
+      if (e.hour >= 0 && e.hour <= 23) buckets[e.hour] += 1;
+    });
+    var peakH = -1,
+      peakV = 0;
+    buckets.forEach(function (v, h) {
+      if (v > peakV) {
+        peakV = v;
+        peakH = h;
+      }
+    });
+    var peakText = peakH >= 0 ? peakH + ':00 前后最活跃' : '分布比较均匀';
+    var r = buildRangeSummary(today, today);
+    var nudge = r.doneTasks > 0 && r.newMemos === 0 ? '任务推进了不少，也给今天的自己留一句话吧。' : r.doneTasks === 0 && r.newMemos > 0 ? '今天更多是在记录与思考，也很好。' : '';
+    var xp = typeof totalXpOf === 'function' ? totalXpOf(state) : 0;
+    return '今天共 ' + events.length + ' 次记录，' + peakText + '。' + '完成 ' + r.doneTasks + ' 个任务、记下 ' + r.newMemos + ' 条灵感，' + '解锁 ' + r.newAchievements + ' 个成就，获得 ' + xp + ' 点经验。' + nudge;
+  }
+
+  /**
+   * 周报总结（近 7 天）：与 Android ReportViewModel.weekSummary 同语气，空着的几天不打击人。
+   */
+  function buildWeekSummaryText() {
+    var today = todayStr();
+    var events = collectEvents(dayKeyAddDays(today, -6), today);
+    if (!events.length) return '这一周还是空的。明天先完成一个小任务试试。';
+    var activeDays = {};
+    events.forEach(function (e) {
+      activeDays[e.day] = 1;
+    });
+    var active = Object.keys(activeDays).length;
+    var nudge = active < 4 ? '空着的几天也没关系，回来继续就好。' : '';
+    var r = buildRangeSummary(dayKeyAddDays(today, -6), today);
+    return '近 7 天有 ' + active + ' 天留下记录，合计 ' + events.length + ' 次。' + '完成任务 ' + r.doneTasks + ' 个，新增灵感 ' + r.newMemos + ' 条，' + '解锁成就 ' + r.newAchievements + ' 个，标记足迹 ' + dashArr(state && state.locations).filter(function (l) {
+      return l && inDayRange(dayKeyOf(l.date), dayKeyAddDays(today, -6), today);
+    }).length + ' 处。' + nudge;
+  }
+
+  /** 月报总结（近 30 天）：周报同款温和语气 */
+  function buildMonthSummaryText() {
+    var today = todayStr();
+    var events = collectEvents(dayKeyAddDays(today, -29), today);
+    if (!events.length) return '这 30 天还没有记录。从一个念头、一件小事开始就好。';
+    var activeDays = {};
+    events.forEach(function (e) {
+      activeDays[e.day] = 1;
+    });
+    var r = buildRangeSummary(dayKeyAddDays(today, -29), today);
+    return '近 30 天有 ' + Object.keys(activeDays).length + ' 天留下记录，合计 ' + events.length + ' 次。' + '完成任务 ' + r.doneTasks + ' 个，新增灵感 ' + r.newMemos + ' 条，解锁成就 ' + r.newAchievements + ' 个。' + '记录这件事，你已经在做了。';
+  }
+
+  /** 年报总结（今年）：与 Android ReportViewModel.yearSummary 同语气 */
+  function buildYearSummaryText() {
+    var y = todayStr().slice(0, 4);
+    var from = y + '-01-01',
+      to = y + '-12-31';
+    var events = collectEvents(from, to);
+    if (!events.length) return '今年还没有记录。人生存档从第一条开始。';
+    var byMonth = {};
+    events.forEach(function (e) {
+      byMonth[e.day.slice(5, 7)] = (byMonth[e.day.slice(5, 7)] || 0) + 1;
+    });
+    var bestM = '',
+      bestV = 0;
+    Object.keys(byMonth).forEach(function (m) {
+      if (byMonth[m] > bestV) {
+        bestV = byMonth[m];
+        bestM = m;
+      }
+    });
+    var bestText = bestM ? '最活跃的是 ' + parseInt(bestM, 10) + ' 月' : '各月分布相近';
+    var r = buildRangeSummary(from, to);
+    var locs = dashArr(state && state.locations).filter(function (l) {
+      return l && inDayRange(dayKeyOf(l.date), from, to);
+    }).length;
+    return '今年共 ' + events.length + ' 次记录，' + bestText + '。' + '完成任务 ' + r.doneTasks + ' 个，解锁成就 ' + r.newAchievements + ' 个，' + '新增灵感 ' + r.newMemos + ' 条、足迹 ' + locs + ' 处。';
+  }
+
+  /** 一次取全四段总结（QA 可直测） */
+  function dashboardSummaries() {
+    return {
+      day: buildDaySummaryText(),
+      week: buildWeekSummaryText(),
+      month: buildMonthSummaryText(),
+      year: buildYearSummaryText()
+    };
+  }
+
+  /** 累计经验一行文案（含连续加成）；口径走 totalXpOf 唯一入口 */
+  function xpLineText() {
+    if (typeof totalXpOf !== 'function') return '';
+    var xp = totalXpOf(state);
+    var bonus = typeof xpStreakBonus === 'function' && typeof currentStreakDays === 'function' ? xpStreakBonus(currentStreakDays(state)) : 0;
+    return '⚡ 累计经验 ' + xp + ' 点' + (bonus > 0 ? '（含连续记录加成 ' + bonus + '）' : '');
+  }
+
   /* ==================== Canvas 折线图 ==================== */
 
   /**
@@ -10972,6 +11600,8 @@ var backpackTab = 'all';
   /** 数据看板页面 */
   function renderDashboard() {
     var data = getDashboardData();
+    // v1.0.2：智能总结（语气与 Android ReportViewModel 一致，空数据不打击）
+    var summaries = dashboardSummaries();
     var caliber = '完成任务数以任务的完成时间戳统计，升级前的历史任务无该时间戳，不计入趋势。';
     var weekDefs = [{
       icon: '📋',
@@ -11008,13 +11638,16 @@ var backpackTab = 'all';
       value: data.month.newAchievements
     }];
 
+    // ⓪ 今日速览（v1.0.2：日报总结）
+    var daySec = '<section class="dash-section d0" id="dashDay">' + '<div class="dash-section-title">📅 今日速览</div>' + '<p class="dash-summary">' + escapeHtml(summaries.day) + '</p>' + '<p class="dash-summary dash-xp-line">' + escapeHtml(xpLineText()) + '</p>' + '</section>';
+
     // ① 周报
     var weekBody = dashSum(data.week) === 0 ? dashEmpty() : '<div class="mini-grid">' + dashMiniCards(weekDefs) + '</div>';
-    var weekSec = '<section class="dash-section d0" id="dashWeek">' + '<div class="dash-section-title">🗓️ 周报摘要<span class="dash-hint">近 7 天（含今天）</span></div>' + weekBody + '</section>';
+    var weekSec = '<section class="dash-section d0" id="dashWeek">' + '<div class="dash-section-title">🗓️ 周报摘要<span class="dash-hint">近 7 天（含今天）</span></div>' + weekBody + '<p class="dash-summary">' + escapeHtml(summaries.week) + '</p>' + '</section>';
 
     // ② 月报
     var monthBody = dashSum(data.month) === 0 ? dashEmpty() : '<div class="month-grid">' + dashMonthCards(monthDefs) + '</div>';
-    var monthSec = '<section class="dash-section d1" id="dashMonth">' + '<div class="dash-section-title">📆 月报摘要<span class="dash-hint">近 30 天（含今天）</span></div>' + monthBody + '</section>';
+    var monthSec = '<section class="dash-section d1" id="dashMonth">' + '<div class="dash-section-title">📆 月报摘要<span class="dash-hint">近 30 天（含今天）</span></div>' + monthBody + '<p class="dash-summary">' + escapeHtml(summaries.month) + '</p>' + '</section>';
 
     // ③ 趋势图
     var chip = function chip(key, text) {
@@ -11049,7 +11682,7 @@ var backpackTab = 'all';
     }].map(function (c) {
       return '<div class="year-card">' + '<div class="year-num" data-count="' + c.num + '">0</div>' + '<div class="year-label">' + c.label + '</div>' + '<div class="year-sub">' + c.sub + '</div>' + '</div>';
     }).join('');
-    var yearSec = '<section class="dash-section d4" id="dashYear">' + '<div class="dash-section-title">🎯 ' + todayStr().slice(0, 4) + ' 年度统计</div>' + '<div class="year-grid">' + yearCards + '</div>' + '</section>';
+    var yearSec = '<section class="dash-section d4" id="dashYear">' + '<div class="dash-section-title">🎯 ' + todayStr().slice(0, 4) + ' 年度统计</div>' + '<div class="year-grid">' + yearCards + '</div>' + '<p class="dash-summary">' + escapeHtml(summaries.year) + '</p>' + '</section>';
 
     // 视图切换（v5：日历并入数据页作为子视图）
     var viewChip = function viewChip(key, text) {
@@ -11063,18 +11696,68 @@ var backpackTab = 'all';
     var calHint = isCal ? '<p class="dash-hint dash-caliber">点任意日期可查看当天的 To Do、灵感记录与任务备注更新。</p>' : '';
     var container = document.getElementById('content');
     if (container) {
-      container.innerHTML = '<section class="page">' + '<div class="page-head">' + '<h2 class="page-title">数据</h2>' + '</div>' + viewSwitch + (isCal ? calHint : '<p class="dash-hint dash-caliber">' + escapeHtml(caliber) + '</p>') + (isCal ? calSec : weekSec + monthSec + trendSec + timelineSec + yearSec) + '</section>';
+      container.innerHTML = '<section class="page">' + '<div class="page-head">' + '<h2 class="page-title">数据</h2>' + '</div>' + viewSwitch + (isCal ? calHint : '<p class="dash-hint dash-caliber">' + escapeHtml(caliber) + '</p>') + (isCal ? calSec : daySec + weekSec + monthSec + trendSec + timelineSec + yearSec) + '</section>';
     }
     if (typeof animateCounters === 'function') animateCounters();
 
     // 图表必须在 innerHTML 之后再取（canvas 才有布局宽度）；日历视图下没有该 canvas
     if (!isCal && data.trend.total > 0) {
       var canvas = document.getElementById('dashTrendCanvas');
-      if (canvas) drawLineChart(canvas, {
-        labels: data.trend.labels,
-        values: data.trend.values
-      });
+      if (canvas) {
+        drawLineChart(canvas, {
+          labels: data.trend.labels,
+          values: data.trend.values
+        });
+        // v1.0.2（P1）：图表点按洞察 —— 点柱/点弹当日明细（模态，列出当日任务与日志）
+        attachTrendClickInsight(canvas, data.trend);
+      }
     }
+  }
+
+  /**
+   * v1.0.2（P1）：趋势图点按洞察。
+   * 取点击横坐标最近的桶，弹出当日明细模态（当日完成的任务与日志）。
+   * 测试桩 canvas 无 addEventListener / getBoundingClientRect 时静默跳过。
+   */
+  function attachTrendClickInsight(canvas, trend) {
+    if (!canvas || typeof canvas.addEventListener !== 'function' || !trend || !Array.isArray(trend.labels)) return;
+    canvas.addEventListener('click', function (e) {
+      try {
+        var rect = typeof canvas.getBoundingClientRect === 'function' ? canvas.getBoundingClientRect() : null;
+        var clientX = e && (e.clientX !== undefined ? e.clientX : e.offsetX !== undefined ? e.offsetX : null);
+        if (clientX == null) return;
+        var cssW = rect ? rect.width : canvas.clientWidth || 0;
+        if (!cssW) return;
+        var padL = 40,
+          padR = 14;
+        var plotW = cssW - padL - padR;
+        if (plotW <= 0) return;
+        var n = trend.labels.length;
+        var idx = Math.round((clientX - (rect ? rect.left : 0) - padL) / plotW * (n - 1));
+        idx = Math.max(0, Math.min(n - 1, idx));
+        // 反推该桶代表的日键：'7d' 标签是 MM/DD（最近 7 天）；'4w' 是周桶（取桶尾日）
+        var today = todayStr();
+        var dayKey = '';
+        if (trend.range === '7d') {
+          dayKey = dayKeyAddDays(today, -(n - 1 - idx));
+        } else {
+          var offs = [[-27, -21], [-20, -14], [-13, -7], [-6, 0]];
+          var b = offs[idx] || offs[3];
+          dayKey = dayKeyAddDays(today, b[1]);
+        }
+        var events = collectEvents(dayKey, dayKey);
+        var rows = events.length ? events.map(function (ev) {
+          var icon = ev.kind === 'task' ? '✅' : ev.kind === 'ach' ? '🏆' : ev.kind === 'loc' ? '🗺️' : '💭';
+          var t = ev.text.length > 30 ? ev.text.slice(0, 30) + '…' : ev.text;
+          return '<div class="detail-item"><span>' + icon + '</span><span>' + escapeHtml(t) + '</span></div>';
+        }).join('') : '<div class="empty">这一天没有留下记录，也很正常。</div>';
+        if (typeof openModal === 'function') {
+          openModal('<h3 class="modal-title">📅 ' + escapeHtml(dayKey) + ' 的记录</h3>' + '<div class="cal-detail">' + rows + '</div>' + '<div class="modal-actions"><button class="btn btn-ghost" id="trendInsightClose">关闭</button></div>');
+          var closeBtn = document.getElementById('trendInsightClose');
+          if (closeBtn) closeBtn.onclick = closeModal;
+        }
+      } catch (err) {/* 点按洞察失败不影响主流程 */}
+    });
   }
 
   /* ---- 导出公共 API 到 EO 命名空间并同步到全局（兼容旧引用 / 测试桩） ---- */
@@ -11169,6 +11852,44 @@ var backpackTab = 'all';
   E.renderDashboard = renderDashboard;
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.renderDashboard === "undefined") globalThis.renderDashboard = renderDashboard;
+  } catch (e) {}
+
+  /* v1.0.2：报告智能总结 / XP 一行 / 图表点按洞察 */
+  E.collectEvents = collectEvents;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.collectEvents === "undefined") globalThis.collectEvents = collectEvents;
+  } catch (e) {}
+  E.localHourOf = localHourOf;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.localHourOf === "undefined") globalThis.localHourOf = localHourOf;
+  } catch (e) {}
+  E.buildDaySummaryText = buildDaySummaryText;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.buildDaySummaryText === "undefined") globalThis.buildDaySummaryText = buildDaySummaryText;
+  } catch (e) {}
+  E.buildWeekSummaryText = buildWeekSummaryText;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.buildWeekSummaryText === "undefined") globalThis.buildWeekSummaryText = buildWeekSummaryText;
+  } catch (e) {}
+  E.buildMonthSummaryText = buildMonthSummaryText;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.buildMonthSummaryText === "undefined") globalThis.buildMonthSummaryText = buildMonthSummaryText;
+  } catch (e) {}
+  E.buildYearSummaryText = buildYearSummaryText;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.buildYearSummaryText === "undefined") globalThis.buildYearSummaryText = buildYearSummaryText;
+  } catch (e) {}
+  E.dashboardSummaries = dashboardSummaries;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.dashboardSummaries === "undefined") globalThis.dashboardSummaries = dashboardSummaries;
+  } catch (e) {}
+  E.xpLineText = xpLineText;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.xpLineText === "undefined") globalThis.xpLineText = xpLineText;
+  } catch (e) {}
+  E.attachTrendClickInsight = attachTrendClickInsight;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.attachTrendClickInsight === "undefined") globalThis.attachTrendClickInsight = attachTrendClickInsight;
   } catch (e) {}
 })();
 /* ===== modules/account.js ===== */
@@ -11674,6 +12395,80 @@ var backpackTab = 'all';
     var recentActs = (state.activities || []).slice(-3).reverse();
     var username = profile.name ? escapeHtml(profile.name) : '地球玩家';
 
+    /* v1.0.2：动态问候 / 连续记录阶段 / 回归鼓励 / 季节徽章 / 累计经验。
+       口径统一走 core.js（与 Android XpRules / GrowthStreak / Greeting / SeasonTheme 一致）。 */
+    var streakDays = typeof currentStreakDays === 'function' ? currentStreakDays(state) : 0;
+    var greetingText = typeof greetingBuild === 'function' ? greetingBuild(new Date().getHours(), latestMoodTextOf(state), streakDays) : '';
+    var stageLabel = typeof streakStageLabel === 'function' ? streakStageLabel(typeof streakStage === 'function' ? streakStage(streakDays) : 0) : '';
+    var comebackText = typeof comebackMessage === 'function' ? comebackMessage(state) : '';
+    var season = typeof seasonCurrent === 'function' ? seasonCurrent() : null;
+    var xpTotalNow = typeof totalXpOf === 'function' ? totalXpOf(state) : 0;
+    var titleText = typeof xpTitleFor === 'function' ? xpTitleFor(profile.customTitle) : '旅行者';
+
+    /* v1.0.2：今日一签 —— 每天确定性随机展示一条过去的日志/成就（日期做种子，同一天刷新不变）。 */
+    var todayLuck = function () {
+      var pool = [];
+      (state.memos || []).forEach(function (m) {
+        if (m && m.text) pool.push({
+          icon: (MEMO_TYPE[m.type] || MEMO_TYPE.idea).emoji,
+          text: String(m.text)
+        });
+      });
+      (state.achievements || []).forEach(function (a) {
+        if (a && a.unlocked && a.title) pool.push({
+          icon: '🏆',
+          text: '解锁成就「' + String(a.title) + '」'
+        });
+      });
+      if (!pool.length) return null;
+      // 朴素字符串哈希 → 确定性索引（同一天任何时段结果一致）
+      var key = todayStr();
+      var seed = 7;
+      for (var i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) % 2147483647;
+      var pick = pool[seed % pool.length];
+      var t = pick.text.length > 42 ? pick.text.slice(0, 42) + '…' : pick.text;
+      return {
+        icon: pick.icon,
+        text: t
+      };
+    }();
+
+    /* v1.0.2：历年今日 —— 去年今天有记录时，顶部轻量出现回忆卡（日志/任务/足迹）。 */
+    var memoryCardHtml = function () {
+      var today = todayStr();
+      var lastYearToday = parseInt(today.slice(0, 4), 10) - 1 + today.slice(4);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(lastYearToday)) return '';
+      var rows = [];
+      (state.memos || []).forEach(function (m) {
+        if (m && m.text && localDayOf(m.createdAt) === lastYearToday) {
+          rows.push({
+            icon: '💭',
+            text: m.text
+          });
+        }
+      });
+      (state.tasks || []).forEach(function (t) {
+        if (t && t.status === 'done' && t.doneAt && localDayOf(t.doneAt) === lastYearToday) {
+          rows.push({
+            icon: '📋',
+            text: '完成「' + (t.title || '任务') + '」'
+          });
+        }
+      });
+      (state.locations || []).forEach(function (l) {
+        if (l && l.date === lastYearToday) rows.push({
+          icon: '🗺️',
+          text: '足迹 · ' + (l.name || '')
+        });
+      });
+      if (!rows.length) return '';
+      var shown = rows.slice(0, 4);
+      return '<div class="card memory-card">' + '<div class="card-title">🕰️ 去年的今天 · ' + escapeHtml(lastYearToday) + '</div>' + shown.map(function (r) {
+        var t = r.text.length > 40 ? r.text.slice(0, 40) + '…' : r.text;
+        return '<div class="memory-row"><span class="memory-icon">' + r.icon + '</span>' + '<span>' + escapeHtml(t) + '</span></div>';
+      }).join('') + (rows.length > shown.length ? '<div class="muted memory-more">还有 ' + (rows.length - shown.length) + ' 条当年的记录</div>' : '') + '<div class="muted memory-foot">那天的你留下的东西，今天还在。</div>' + '</div>';
+    }();
+
     /* 1. 顶部角色横幅（左：头像 + 用户名/生日；右：等级信息） */
     var birthText = state.birthDate ? '🎂 ' + escapeHtml(state.birthDate) : '🎂 未设置生日';
 
@@ -11694,7 +12489,9 @@ var backpackTab = 'all';
     // v5：未设置生日时年龄为 0，「距下一级还有 0 天」毫无意义，改为引导文案
     '<div class="hero-next">' + (stats.hasBirth ? '距下一级还有 <strong>' + stats.daysToNext + '</strong> 天' : '设置生日后开启等级') + '</div>' + '<div class="hero-exp">' +
     // 进度条用 transform: scaleX() 驱动（GPU 合成层），不再逐帧改 width 触发重排
-    '<span class="hero-exp-fill" style="transform:scaleX(' + Math.max(0, Math.min(1, stats.progress)).toFixed(4) + ')"></span>' + '</div>' + '</div>' + '</div>';
+    '<span class="hero-exp-fill" style="transform:scaleX(' + Math.max(0, Math.min(1, stats.progress)).toFixed(4) + ')"></span>' + '</div>' +
+    // v1.0.2：累计经验（口径与 Android XpRules 一致，含连续记录加成）
+    '<div class="hero-xp">⚡ 经验 <strong>' + xpTotalNow + '</strong></div>' + '</div>' + '</div>';
 
     /* 2. 全局概览（4 卡，整卡可点击跳转对应页；桌面 4 列、移动 2 列，毛玻璃）
        v1.2.0：四张卡一律渲染 3 行文案 —— 内容行数一致 + CSS grid-auto-rows:1fr，
@@ -11860,8 +12657,23 @@ var backpackTab = 'all';
       return '<div class="tl-item">' + '<span class="tl-dot tl-' + e.type + '"></span>' + '<span class="tl-date">' + escapeHtml(e.day || '—') + '</span>' + '<span class="tl-icon">' + (tlIcon[e.type] || '•') + '</span>' + '<span class="tl-title">' + escapeHtml(e.title) + '</span>' + '</div>';
     }).join('') + '</div>' : '<div class="empty">✧ 还没有重要事件，去完成任务、解锁成就或标记足迹吧~</div>';
 
-    /* 7. 人生卡片（v15 批 C · 第 21 项）：等级 / 成就 / 足迹 / 任务完成率 + 分享 */
-    var lifeCardHtml = '<div class="life-card" id="lifeCard">' + '<div class="life-card-head">🌍 地球Online · 人生卡片</div>' + '<div class="life-card-name">' + username + '</div>' + '<div class="life-card-stats">' + '<div class="lcs"><b>Lv.' + stats.age + '</b><span>等级</span></div>' + '<div class="lcs"><b>' + unlockedAch + '</b><span>成就</span></div>' + '<div class="lcs"><b>' + (state.locations || []).length + '</b><span>足迹</span></div>' + '<div class="lcs"><b>' + doneRatio + '%</b><span>完成率</span></div>' + '</div>' + '<button class="btn btn-ghost btn-sm life-card-share" data-action="life-card-share">📤 分享人生卡片</button>' + '</div>';
+    /* 7. 人生卡片（v15 批 C · 第 21 项）：等级 / 成就 / 足迹 / 任务完成率 + 分享。
+       v1.0.2：展示「称号 · Lv.X」、累计经验与徽章墙（最多佩戴 3 枚已解锁成就）。 */
+    var wornBadges = function () {
+      var ids = Array.isArray(profile.wornBadges) ? profile.wornBadges : [];
+      return ids.map(function (id) {
+        var a = typeof getAchievementById === 'function' ? getAchievementById(id) : null;
+        return a && a.unlocked ? a : null;
+      }).filter(Boolean).slice(0, 3);
+    }();
+    var wornBadgesHtml = wornBadges.length ? '<div class="life-card-badges">' + wornBadges.map(function (a) {
+      return '<span class="worn-badge" title="' + escapeHtml(a.title) + '">★ ' + escapeHtml(a.title) + '</span>';
+    }).join('') + '</div>' : '';
+    var unlockedAchCount = state.achievements.filter(function (a) {
+      return a && a.unlocked;
+    }).length;
+    var badgeWearBtn = unlockedAchCount ? '<button class="btn btn-ghost btn-sm life-card-badge-btn" data-action="badge-wear">🎖️ 佩戴徽章</button>' : '';
+    var lifeCardHtml = '<div class="life-card" id="lifeCard">' + '<div class="life-card-head">🌍 地球Online · 人生卡片</div>' + '<div class="life-card-name">' + username + '</div>' + '<div class="life-card-title">' + escapeHtml(titleText) + ' · Lv.' + stats.age + '</div>' + '<div class="life-card-stats">' + '<div class="lcs"><b>Lv.' + stats.age + '</b><span>等级</span></div>' + '<div class="lcs"><b>' + unlockedAch + '</b><span>成就</span></div>' + '<div class="lcs"><b>' + (state.locations || []).length + '</b><span>足迹</span></div>' + '<div class="lcs"><b>' + doneRatio + '%</b><span>完成率</span></div>' + '</div>' + '<div class="life-card-xp">⚡ 累计经验 <strong>' + xpTotalNow + '</strong> 点</div>' + wornBadgesHtml + '<button class="btn btn-ghost btn-sm life-card-share" data-action="life-card-share">📤 分享人生卡片</button>' + badgeWearBtn + '</div>';
 
     /* 0b. 右上角「设置」图标按钮。
        v1.2.1 精简：原「☰ 更多」下拉面板整个移除 —— 成就 / 收藏 / 地图 / 记账 在主页
@@ -11871,16 +12683,20 @@ var backpackTab = 'all';
        已随面板一并删除（不留死代码），dispatchClick 与 handleBack 里的调用点也清了。 */
     var morePanelHtml = '<div class="home-more-wrap">' + '<button type="button" class="home-setting-btn" id="moreBtn" data-action="nav" data-page="settings" ' + 'aria-label="设置" title="设置">⚙️</button>' + '</div>';
 
-    /* 0. 主页标题栏（v10）：置于角色信息区上方；面板移入标题栏内作为绝对定位锚点 */
-    var homeTitle = '<div class="home-titlebar">' + '<div class="home-title-text">' + '<h1 class="home-title">🌍 地球Online</h1>' + '<p class="home-subtitle">人生记录 · 开放世界</p>' + '</div>' + morePanelHtml + '</div>';
+    /* 0. 主页标题栏（v10）：置于角色信息区上方；面板移入标题栏内作为绝对定位锚点。
+       v1.0.2：标题区附当季限定徽章（春樱/夏夜/秋叶/冬雪），标题下方是动态问候语。 */
+    var seasonBadgeHtml = season ? '<span class="season-badge" style="color:' + season.accent + '" title="' + season.label + '限定">' + season.emoji + ' ' + season.label + '</span>' : '';
+    var greetingHtml = greetingText ? '<p class="home-greeting">' + escapeHtml(greetingText) + (stageLabel ? ' <span class="streak-badge">' + escapeHtml(stageLabel) + ' · ' + streakDays + ' 天</span>' : '') + '</p>' : '';
+    var comebackHtml = comebackText ? '<div class="comeback-card">🌱 ' + escapeHtml(comebackText) + '</div>' : '';
+    var homeTitle = '<div class="home-titlebar">' + '<div class="home-title-text">' + '<h1 class="home-title">🌍 地球Online' + seasonBadgeHtml + '</h1>' + '<p class="home-subtitle">人生记录 · 开放世界</p>' + greetingHtml + '</div>' + morePanelHtml + '</div>';
 
     /* 0b. v1.2.1：主页顶部全局搜索（任务 / 物品 / 收藏）。
        放在标题栏下方而不是每个列表页各放一个 —— 三个数据源本来就跨页，
        只有在主页做才叫「全局」；空词时只有一根搜索条，不抢首屏。 */
     var homeSearch = '<div class="home-search-wrap">' + '<div class="home-search-box">' + '<span class="home-search-icon" aria-hidden="true">🔍</span>' + '<input class="home-search-input" id="homeSearch" type="search" autocomplete="off" maxlength="40" ' + 'placeholder="搜索任务 / 物品 / 收藏…" aria-label="全局搜索">' + '<button type="button" class="home-search-clear" data-action="home-search-clear" ' + 'aria-label="清空搜索" title="清空">✕</button>' + '</div>' + '<div class="home-search-results" id="homeSearchResults"></div>' + '</div>';
-    document.getElementById('content').innerHTML = '<section class="page home-page">' + homeTitle + homeSearch + banner + '<div class="overview-grid">' + overviewCards + '</div>' + '<div class="quick-grid">' + quickGrid + '</div>' + '<div class="card world-card">' + '<div class="card-title">🌍 世界日志</div>' + '<div class="world-input-row">' + '<input class="memo-input" id="homeMemoInput" placeholder="记录一闪而过的想法，回车即保存" maxlength="200">' +
+    document.getElementById('content').innerHTML = '<section class="page home-page">' + homeTitle + homeSearch + memoryCardHtml + comebackHtml + banner + '<div class="overview-grid">' + overviewCards + '</div>' + '<div class="quick-grid">' + quickGrid + '</div>' + '<div class="card world-card">' + '<div class="card-title">🌍 世界日志</div>' + '<div class="world-input-row">' + '<input class="memo-input" id="homeMemoInput" placeholder="记录一闪而过的想法，回车即保存" maxlength="200">' +
     // v15：语音输入（Web Speech API，中文识别），识别结果直接填入上方输入框
-    '<button class="btn btn-ghost btn-sm world-voice-btn" id="homeMemoVoice" data-action="home-memo-voice" title="语音输入" aria-label="语音输入">🎤</button>' + '<select id="homeMemoType" class="world-type">' + memoTypeOptions + '</select>' + '<button class="btn btn-primary btn-sm" data-action="home-memo-add">📌 记录</button>' + '</div>' + '<div class="world-list">' + worldRows + '</div>' + showAllMemosBtn + '</div>' + '<div class="card act-card">' + '<div class="card-title">📡 最近动态</div>' + '<div class="act-list">' + actRows + '</div>' + '</div>' + '<div class="card timeline-card">' + '<div class="card-title">🕰️ 人生时间轴</div>' + timelineHtml + '</div>' + lifeCardHtml + '<div class="home-quote">“' + escapeHtml(quote) + '”</div>' + '<p class="muted home-foot">提示：出生日期（等级 = 年龄）可在「个人资料」中修改。</p>' + '</section>';
+    '<button class="btn btn-ghost btn-sm world-voice-btn" id="homeMemoVoice" data-action="home-memo-voice" title="语音输入" aria-label="语音输入">🎤</button>' + '<select id="homeMemoType" class="world-type">' + memoTypeOptions + '</select>' + '<button class="btn btn-primary btn-sm" data-action="home-memo-add">📌 记录</button>' + '</div>' + '<div class="world-list">' + worldRows + '</div>' + showAllMemosBtn + '</div>' + '<div class="card act-card">' + '<div class="card-title">📡 最近动态</div>' + '<div class="act-list">' + actRows + '</div>' + '</div>' + '<div class="card timeline-card">' + '<div class="card-title">🕰️ 人生时间轴</div>' + timelineHtml + '</div>' + lifeCardHtml + (todayLuck ? '<div class="card luck-card">' + '<div class="card-title">🔮 今日一签</div>' + '<div class="luck-body"><span class="luck-icon">' + todayLuck.icon + '</span>' + '<span class="luck-text">' + escapeHtml(todayLuck.text) + '</span></div>' + '<div class="muted luck-foot">每天翻开你过去留下的一页，明天再来会是新的一签。</div>' + '</div>' : '') + '<div class="home-quote">“' + escapeHtml(quote) + '”</div>' + '<p class="muted home-foot">提示：出生日期（等级 = 年龄）可在「个人资料」中修改。</p>' + '</section>';
 
     // 数字从 0 滚动到目标值
     if (typeof animateCounters === 'function') animateCounters();
@@ -12067,6 +12883,21 @@ var backpackTab = 'all';
         toast('生成卡片失败，请截图主页');
       }
     }
+  }
+
+  /* v1.0.2：徽章墙选择器 —— 从已解锁成就中佩戴最多 3 枚（模态 + 就地刷新） */
+  function openBadgeWallModal() {
+    var worn = (getProfile().wornBadges || []).slice();
+    var unlocked = state.achievements.filter(function (a) {
+      return a && a.unlocked && a.title;
+    });
+    var rows = unlocked.length ? unlocked.map(function (a) {
+      var isWorn = worn.indexOf(a.id) !== -1;
+      return '<button class="badge-wall-item' + (isWorn ? ' worn' : '') + '" data-action="badge-toggle" data-id="' + a.id + '" title="' + (isWorn ? '点击摘下' : '点击佩戴') + '">' + '<span class="badge-wall-star">' + (isWorn ? '★' : '☆') + '</span>' + '<span class="badge-wall-title">' + escapeHtml(a.title) + '</span>' + '<span class="badge-wall-state">' + (isWorn ? '已佩戴' : '佩戴') + '</span>' + '</button>';
+    }).join('') : '<div class="empty">还没有已解锁的成就，先去解锁一枚吧~</div>';
+    openModal('<h3 class="modal-title">🎖️ 佩戴徽章</h3>' + '<p class="modal-text">从已解锁的成就里挑最多 3 枚，佩戴在主页人生卡片上。</p>' + '<div class="badge-wall-list">' + rows + '</div>' + '<div class="modal-actions"><button class="btn btn-ghost" id="badgeWallClose">关闭</button></div>');
+    var closeBtn = document.getElementById('badgeWallClose');
+    if (closeBtn) closeBtn.onclick = closeModal;
   }
 
   /** 同步麦克风按钮的视觉状态（录音中高亮） */
@@ -12351,7 +13182,9 @@ var backpackTab = 'all';
     var cat = (state.itemCategories || []).find(function (c) {
       return c.id === item.category;
     });
-    return '<div class="item-card bp-card">' + '<div class="item-head">' + '<span class="badge ' + (cat ? 'badge-cat' : 'badge-none') + '">' + escapeHtml(cat ? cat.name : '未分类') + '</span>' + '<span class="task-actions">' + '<button class="icon-btn" data-action="item-edit" data-id="' + item.id + '">编辑</button>' + '<button class="icon-btn danger" data-action="item-delete" data-id="' + item.id + '">删除</button>' + '</span>' + '</div>' + '<div class="item-name">' + escapeHtml(item.name) + '</div>' + '<div class="item-desc">' + escapeHtml(item.description || '—') + '</div>' + '<div class="muted item-date">入手时间：' + escapeHtml(item.createdAt) + '</div>' + '</div>';
+    return '<div class="item-card bp-card">' + '<div class="item-head">' + '<span class="badge ' + (cat ? 'badge-cat' : 'badge-none') + '">' + escapeHtml(cat ? cat.name : '未分类') + '</span>' + '<span class="task-actions">' + '<button class="icon-btn" data-action="item-edit" data-id="' + item.id + '">编辑</button>' + '<button class="icon-btn danger" data-action="item-delete" data-id="' + item.id + '">删除</button>' + '</span>' + '</div>' + '<div class="item-name">' + escapeHtml(item.name) + '</div>' + (
+    // v1.0.2：物品故事卡 —— 有描述时以 📖 书签样式强调展示（物品故事比属性更值得被看见）
+    item.description ? '<div class="item-desc item-story"><span class="item-story-mark">📖</span>' + escapeHtml(item.description) + '</div>' : '<div class="item-desc">' + escapeHtml(item.description || '—') + '</div>') + '<div class="muted item-date">入手时间：' + escapeHtml(item.createdAt) + '</div>' + '</div>';
   }
 
   /** 按分类聚合展示：标题 + 卡片网格 */
@@ -13219,7 +14052,7 @@ var backpackTab = 'all';
    */
   function doWebUpdateCheck() {
     var info = (typeof APP_INFO === "undefined" ? "undefined" : _typeof(APP_INFO)) === 'object' && APP_INFO ? APP_INFO : {
-      version: '1.0.1'
+      version: '1.0.0'
     };
     var cur = info.version;
     var shown = function shown(bodyHtml) {
@@ -13540,6 +14373,28 @@ var backpackTab = 'all';
         case 'life-card-share':
           shareLifeCard();
           break;
+        /* v1.0.2：徽章墙 —— 从已解锁成就中佩戴最多 3 枚 */
+        case 'badge-wear':
+          openBadgeWallModal();
+          break;
+        case 'badge-toggle':
+          {
+            var bid = btn.dataset.id;
+            var worn = (getProfile().wornBadges || []).slice();
+            var idx = worn.indexOf(bid);
+            if (idx !== -1) worn.splice(idx, 1);else {
+              if (worn.length >= 3) {
+                toast('最多佩戴 3 枚徽章，先摘下一枚吧');
+                break;
+              }
+              worn.push(bid);
+            }
+            updateProfile({
+              wornBadges: worn
+            });
+            openBadgeWallModal(); // 就地刷新选择态
+            break;
+          }
         case 'goto-profile':
           navigate('profile');
           break;

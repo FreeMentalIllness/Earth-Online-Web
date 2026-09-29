@@ -229,6 +229,144 @@ function getDashboardData() {
   };
 }
 
+/* ==================== v1.0.2：报告智能总结（语气与 Android ReportViewModel 的 day/week/yearSummary 一致） ==================== */
+
+/**
+ * 收集 [fromDay, toDay] 内的「事件」（灵感 / 完成任务 / 解锁成就 / 足迹）。
+ * @returns {{day:string, hour:number, kind:string, text:string}[]}
+ */
+function collectEvents(startDay, endDay) {
+  const out = [];
+  const inR = function (k) { return inDayRange(k, startDay, endDay); };
+  dashArr(state && state.memos).forEach(function (m) {
+    if (!m) return;
+    const k = dayKeyOf(m.createdAt);
+    if (inR(k)) out.push({ day: k, hour: localHourOf(m.createdAt), kind: 'memo', text: String(m.text || '') });
+  });
+  dashArr(state && state.tasks).forEach(function (t) {
+    if (!t || !t.doneAt) return;
+    const k = dayKeyOf(t.doneAt);
+    if (inR(k)) out.push({ day: k, hour: localHourOf(t.doneAt), kind: 'task', text: String(t.title || '') });
+  });
+  dashArr(state && state.achievements).forEach(function (a) {
+    if (!a || !a.unlocked) return;
+    const k = dayKeyOf(a.unlockedAt);
+    if (inR(k)) out.push({ day: k, hour: localHourOf(a.unlockedAt), kind: 'ach', text: String(a.title || '') });
+  });
+  dashArr(state && state.locations).forEach(function (l) {
+    if (!l || !l.date) return;
+    const k = dayKeyOf(l.date);
+    if (inR(k)) out.push({ day: k, hour: -1, kind: 'loc', text: String(l.name || '') });
+  });
+  return out;
+}
+
+/** ISO 时间 → 本地小时；非法返回 -1（QA 桩环境 new Date(iso) 可能解析失败，绝不抛异常） */
+function localHourOf(v) {
+  try {
+    if (!v) return -1;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return -1;
+    return d.getHours();
+  } catch (e) { return -1; }
+}
+
+/**
+ * 日报总结（今天）：挑一个峰值时段说人话，全空时给一句不打击人的话。
+ * 语气与 Android ReportViewModel.daySummary 完全一致。
+ */
+function buildDaySummaryText() {
+  const today = todayStr();
+  const events = collectEvents(today, today);
+  if (!events.length) return '今天还没有任何记录。写下第一条世界日志，就算开局了。';
+  const buckets = new Array(24);
+  for (let i = 0; i < 24; i++) buckets[i] = 0;
+  events.forEach(function (e) { if (e.hour >= 0 && e.hour <= 23) buckets[e.hour] += 1; });
+  let peakH = -1, peakV = 0;
+  buckets.forEach(function (v, h) { if (v > peakV) { peakV = v; peakH = h; } });
+  const peakText = peakH >= 0 ? (peakH + ':00 前后最活跃') : '分布比较均匀';
+  const r = buildRangeSummary(today, today);
+  const nudge = (r.doneTasks > 0 && r.newMemos === 0)
+    ? '任务推进了不少，也给今天的自己留一句话吧。'
+    : (r.doneTasks === 0 && r.newMemos > 0 ? '今天更多是在记录与思考，也很好。' : '');
+  const xp = (typeof totalXpOf === 'function') ? totalXpOf(state) : 0;
+  return '今天共 ' + events.length + ' 次记录，' + peakText + '。' +
+    '完成 ' + r.doneTasks + ' 个任务、记下 ' + r.newMemos + ' 条灵感，' +
+    '解锁 ' + r.newAchievements + ' 个成就，获得 ' + xp + ' 点经验。' + nudge;
+}
+
+/**
+ * 周报总结（近 7 天）：与 Android ReportViewModel.weekSummary 同语气，空着的几天不打击人。
+ */
+function buildWeekSummaryText() {
+  const today = todayStr();
+  const events = collectEvents(dayKeyAddDays(today, -6), today);
+  if (!events.length) return '这一周还是空的。明天先完成一个小任务试试。';
+  const activeDays = {};
+  events.forEach(function (e) { activeDays[e.day] = 1; });
+  const active = Object.keys(activeDays).length;
+  const nudge = active < 4 ? '空着的几天也没关系，回来继续就好。' : '';
+  const r = buildRangeSummary(dayKeyAddDays(today, -6), today);
+  return '近 7 天有 ' + active + ' 天留下记录，合计 ' + events.length + ' 次。' +
+    '完成任务 ' + r.doneTasks + ' 个，新增灵感 ' + r.newMemos + ' 条，' +
+    '解锁成就 ' + r.newAchievements + ' 个，标记足迹 ' +
+    dashArr(state && state.locations).filter(function (l) {
+      return l && inDayRange(dayKeyOf(l.date), dayKeyAddDays(today, -6), today);
+    }).length + ' 处。' + nudge;
+}
+
+/** 月报总结（近 30 天）：周报同款温和语气 */
+function buildMonthSummaryText() {
+  const today = todayStr();
+  const events = collectEvents(dayKeyAddDays(today, -29), today);
+  if (!events.length) return '这 30 天还没有记录。从一个念头、一件小事开始就好。';
+  const activeDays = {};
+  events.forEach(function (e) { activeDays[e.day] = 1; });
+  const r = buildRangeSummary(dayKeyAddDays(today, -29), today);
+  return '近 30 天有 ' + Object.keys(activeDays).length + ' 天留下记录，合计 ' + events.length + ' 次。' +
+    '完成任务 ' + r.doneTasks + ' 个，新增灵感 ' + r.newMemos + ' 条，解锁成就 ' + r.newAchievements + ' 个。' +
+    '记录这件事，你已经在做了。';
+}
+
+/** 年报总结（今年）：与 Android ReportViewModel.yearSummary 同语气 */
+function buildYearSummaryText() {
+  const y = todayStr().slice(0, 4);
+  const from = y + '-01-01', to = y + '-12-31';
+  const events = collectEvents(from, to);
+  if (!events.length) return '今年还没有记录。人生存档从第一条开始。';
+  const byMonth = {};
+  events.forEach(function (e) { byMonth[e.day.slice(5, 7)] = (byMonth[e.day.slice(5, 7)] || 0) + 1; });
+  let bestM = '', bestV = 0;
+  Object.keys(byMonth).forEach(function (m) { if (byMonth[m] > bestV) { bestV = byMonth[m]; bestM = m; } });
+  const bestText = bestM ? ('最活跃的是 ' + parseInt(bestM, 10) + ' 月') : '各月分布相近';
+  const r = buildRangeSummary(from, to);
+  const locs = dashArr(state && state.locations).filter(function (l) {
+    return l && inDayRange(dayKeyOf(l.date), from, to);
+  }).length;
+  return '今年共 ' + events.length + ' 次记录，' + bestText + '。' +
+    '完成任务 ' + r.doneTasks + ' 个，解锁成就 ' + r.newAchievements + ' 个，' +
+    '新增灵感 ' + r.newMemos + ' 条、足迹 ' + locs + ' 处。';
+}
+
+/** 一次取全四段总结（QA 可直测） */
+function dashboardSummaries() {
+  return {
+    day: buildDaySummaryText(),
+    week: buildWeekSummaryText(),
+    month: buildMonthSummaryText(),
+    year: buildYearSummaryText(),
+  };
+}
+
+/** 累计经验一行文案（含连续加成）；口径走 totalXpOf 唯一入口 */
+function xpLineText() {
+  if (typeof totalXpOf !== 'function') return '';
+  const xp = totalXpOf(state);
+  const bonus = (typeof xpStreakBonus === 'function' && typeof currentStreakDays === 'function')
+    ? xpStreakBonus(currentStreakDays(state)) : 0;
+  return '⚡ 累计经验 ' + xp + ' 点' + (bonus > 0 ? '（含连续记录加成 ' + bonus + '）' : '');
+}
+
 /* ==================== Canvas 折线图 ==================== */
 
 /**
@@ -400,6 +538,8 @@ function dashSum(r) {
 /** 数据看板页面 */
 function renderDashboard() {
   const data = getDashboardData();
+  // v1.0.2：智能总结（语气与 Android ReportViewModel 一致，空数据不打击）
+  const summaries = dashboardSummaries();
   const caliber = '完成任务数以任务的完成时间戳统计，升级前的历史任务无该时间戳，不计入趋势。';
 
   const weekDefs = [
@@ -415,6 +555,14 @@ function renderDashboard() {
     { icon: '🏆', label: '解锁成就', value: data.month.newAchievements },
   ];
 
+  // ⓪ 今日速览（v1.0.2：日报总结）
+  const daySec =
+    '<section class="dash-section d0" id="dashDay">' +
+      '<div class="dash-section-title">📅 今日速览</div>' +
+      '<p class="dash-summary">' + escapeHtml(summaries.day) + '</p>' +
+      '<p class="dash-summary dash-xp-line">' + escapeHtml(xpLineText()) + '</p>' +
+    '</section>';
+
   // ① 周报
   const weekBody = dashSum(data.week) === 0
     ? dashEmpty()
@@ -423,6 +571,7 @@ function renderDashboard() {
     '<section class="dash-section d0" id="dashWeek">' +
       '<div class="dash-section-title">🗓️ 周报摘要<span class="dash-hint">近 7 天（含今天）</span></div>' +
       weekBody +
+      '<p class="dash-summary">' + escapeHtml(summaries.week) + '</p>' +
     '</section>';
 
   // ② 月报
@@ -433,6 +582,7 @@ function renderDashboard() {
     '<section class="dash-section d1" id="dashMonth">' +
       '<div class="dash-section-title">📆 月报摘要<span class="dash-hint">近 30 天（含今天）</span></div>' +
       monthBody +
+      '<p class="dash-summary">' + escapeHtml(summaries.month) + '</p>' +
     '</section>';
 
   // ③ 趋势图
@@ -484,6 +634,7 @@ function renderDashboard() {
     '<section class="dash-section d4" id="dashYear">' +
       '<div class="dash-section-title">🎯 ' + todayStr().slice(0, 4) + ' 年度统计</div>' +
       '<div class="year-grid">' + yearCards + '</div>' +
+      '<p class="dash-summary">' + escapeHtml(summaries.year) + '</p>' +
     '</section>';
 
   // 视图切换（v5：日历并入数据页作为子视图）
@@ -516,7 +667,7 @@ function renderDashboard() {
         (isCal ? calHint : '<p class="dash-hint dash-caliber">' + escapeHtml(caliber) + '</p>') +
         (isCal
           ? calSec
-          : weekSec + monthSec + trendSec + timelineSec + yearSec) +
+          : daySec + weekSec + monthSec + trendSec + timelineSec + yearSec) +
       '</section>';
   }
 
@@ -525,8 +676,63 @@ function renderDashboard() {
   // 图表必须在 innerHTML 之后再取（canvas 才有布局宽度）；日历视图下没有该 canvas
   if (!isCal && data.trend.total > 0) {
     const canvas = document.getElementById('dashTrendCanvas');
-    if (canvas) drawLineChart(canvas, { labels: data.trend.labels, values: data.trend.values });
+    if (canvas) {
+      drawLineChart(canvas, { labels: data.trend.labels, values: data.trend.values });
+      // v1.0.2（P1）：图表点按洞察 —— 点柱/点弹当日明细（模态，列出当日任务与日志）
+      attachTrendClickInsight(canvas, data.trend);
+    }
   }
+}
+
+/**
+ * v1.0.2（P1）：趋势图点按洞察。
+ * 取点击横坐标最近的桶，弹出当日明细模态（当日完成的任务与日志）。
+ * 测试桩 canvas 无 addEventListener / getBoundingClientRect 时静默跳过。
+ */
+function attachTrendClickInsight(canvas, trend) {
+  if (!canvas || typeof canvas.addEventListener !== 'function' || !trend || !Array.isArray(trend.labels)) return;
+  canvas.addEventListener('click', function (e) {
+    try {
+      const rect = (typeof canvas.getBoundingClientRect === 'function') ? canvas.getBoundingClientRect() : null;
+      const clientX = e && (e.clientX !== undefined ? e.clientX : (e.offsetX !== undefined ? e.offsetX : null));
+      if (clientX == null) return;
+      const cssW = rect ? rect.width : (canvas.clientWidth || 0);
+      if (!cssW) return;
+      const padL = 40, padR = 14;
+      const plotW = cssW - padL - padR;
+      if (plotW <= 0) return;
+      const n = trend.labels.length;
+      let idx = Math.round(((clientX - (rect ? rect.left : 0) - padL) / plotW) * (n - 1));
+      idx = Math.max(0, Math.min(n - 1, idx));
+      // 反推该桶代表的日键：'7d' 标签是 MM/DD（最近 7 天）；'4w' 是周桶（取桶尾日）
+      const today = todayStr();
+      let dayKey = '';
+      if (trend.range === '7d') {
+        dayKey = dayKeyAddDays(today, -(n - 1 - idx));
+      } else {
+        const offs = [[-27, -21], [-20, -14], [-13, -7], [-6, 0]];
+        const b = offs[idx] || offs[3];
+        dayKey = dayKeyAddDays(today, b[1]);
+      }
+      const events = collectEvents(dayKey, dayKey);
+      const rows = events.length
+        ? events.map(function (ev) {
+            const icon = ev.kind === 'task' ? '✅' : (ev.kind === 'ach' ? '🏆' : (ev.kind === 'loc' ? '🗺️' : '💭'));
+            const t = ev.text.length > 30 ? ev.text.slice(0, 30) + '…' : ev.text;
+            return '<div class="detail-item"><span>' + icon + '</span><span>' + escapeHtml(t) + '</span></div>';
+          }).join('')
+        : '<div class="empty">这一天没有留下记录，也很正常。</div>';
+      if (typeof openModal === 'function') {
+        openModal(
+          '<h3 class="modal-title">📅 ' + escapeHtml(dayKey) + ' 的记录</h3>' +
+          '<div class="cal-detail">' + rows + '</div>' +
+          '<div class="modal-actions"><button class="btn btn-ghost" id="trendInsightClose">关闭</button></div>'
+        );
+        const closeBtn = document.getElementById('trendInsightClose');
+        if (closeBtn) closeBtn.onclick = closeModal;
+      }
+    } catch (err) { /* 点按洞察失败不影响主流程 */ }
+  });
 }
 
   /* ---- 导出公共 API 到 EO 命名空间并同步到全局（兼容旧引用 / 测试桩） ---- */
@@ -576,4 +782,24 @@ function renderDashboard() {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.dashSum === "undefined") globalThis.dashSum = dashSum; } catch (e) {}
   E.renderDashboard = renderDashboard;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderDashboard === "undefined") globalThis.renderDashboard = renderDashboard; } catch (e) {}
+
+  /* v1.0.2：报告智能总结 / XP 一行 / 图表点按洞察 */
+  E.collectEvents = collectEvents;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.collectEvents === "undefined") globalThis.collectEvents = collectEvents; } catch (e) {}
+  E.localHourOf = localHourOf;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.localHourOf === "undefined") globalThis.localHourOf = localHourOf; } catch (e) {}
+  E.buildDaySummaryText = buildDaySummaryText;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.buildDaySummaryText === "undefined") globalThis.buildDaySummaryText = buildDaySummaryText; } catch (e) {}
+  E.buildWeekSummaryText = buildWeekSummaryText;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.buildWeekSummaryText === "undefined") globalThis.buildWeekSummaryText = buildWeekSummaryText; } catch (e) {}
+  E.buildMonthSummaryText = buildMonthSummaryText;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.buildMonthSummaryText === "undefined") globalThis.buildMonthSummaryText = buildMonthSummaryText; } catch (e) {}
+  E.buildYearSummaryText = buildYearSummaryText;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.buildYearSummaryText === "undefined") globalThis.buildYearSummaryText = buildYearSummaryText; } catch (e) {}
+  E.dashboardSummaries = dashboardSummaries;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.dashboardSummaries === "undefined") globalThis.dashboardSummaries = dashboardSummaries; } catch (e) {}
+  E.xpLineText = xpLineText;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.xpLineText === "undefined") globalThis.xpLineText = xpLineText; } catch (e) {}
+  E.attachTrendClickInsight = attachTrendClickInsight;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.attachTrendClickInsight === "undefined") globalThis.attachTrendClickInsight = attachTrendClickInsight; } catch (e) {}
 })();

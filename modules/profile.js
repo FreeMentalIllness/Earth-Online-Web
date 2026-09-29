@@ -209,8 +209,11 @@ function renderProfile() {
     country: p.country,
     province: p.province,
     signature: p.signature,
+    customTitle: p.customTitle || '',
     birthDate: state.birthDate,
   };
+  // v1.0.2：称号展示口径与 Android XpRules.titleFor 一致（未自定义 → 「旅行者」）
+  const titleText = (typeof xpTitleFor === 'function') ? xpTitleFor(draft.customTitle) : String(draft.customTitle || '旅行者');
   const avatar = currentAvatar();
 
   const avatarCells = BUILTIN_AVATARS.map(function (a) {
@@ -266,7 +269,7 @@ function renderProfile() {
         '</span>' +
         '<div class="profile-user-body">' +
           '<div class="profile-user-name">' + (draft.name ? escapeHtml(draft.name) : '<span class="muted">未命名玩家</span>') +
-            ' <span class="badge badge-level">Lv.' + stats.age + '</span></div>' +
+            ' <span class="badge badge-level">' + escapeHtml(titleText) + ' · Lv.' + stats.age + '</span></div>' +
           '<div class="muted profile-user-sign">' +
             (draft.signature ? escapeHtml(draft.signature) : '还没有签名，写一句话介绍自己吧') + '</div>' +
         '</div>' +
@@ -279,6 +282,11 @@ function renderProfile() {
             '<label class="field-label" for="profileName">姓名</label>' +
             '<input id="profileName" class="list-input" placeholder="怎么称呼你？" maxlength="30" value="' +
               escapeHtml(draft.name) + '">' +
+          '</div>' +
+          '<div class="list-row">' +
+            '<label class="field-label" for="profileTitle">称号</label>' +
+            '<input id="profileTitle" class="list-input" placeholder="留空显示「旅行者」" maxlength="12" value="' +
+              escapeHtml(draft.customTitle || '') + '">' +
           '</div>' +
           '<div class="list-row list-row-col">' +
             '<span class="field-label">头像</span>' +
@@ -359,6 +367,7 @@ function captureProfileFormDraft() {
   const signEl = document.getElementById('profileSignature');
   const countryEl = document.getElementById('profileCountry');
   const provinceEl = document.getElementById('profileProvince');
+  const titleEl = document.getElementById('profileTitle');
   profileFormDraft = {
     name: nameEl.value,
     gender: genderEl ? genderEl.value : '',
@@ -366,6 +375,7 @@ function captureProfileFormDraft() {
     birthDate: birthEl.value,
     country: countryEl ? countryEl.value : '',
     province: provinceEl ? provinceEl.value : '',
+    customTitle: titleEl ? titleEl.value : '',
   };
 }
 
@@ -520,6 +530,7 @@ function handleProfileSave() {
   const birth = val('profileBirth');
   const country = val('profileCountry');
   const province = val('profileProvince');
+  const customTitle = val('profileTitle').trim();
 
   const birthResult = setBirthDate(birth);
   if (!birthResult.ok) {
@@ -527,7 +538,7 @@ function handleProfileSave() {
     return;
   }
 
-  const patch = { name: name, gender: gender, signature: signature, country: country, province: province };
+  const patch = { name: name, gender: gender, signature: signature, country: country, province: province, customTitle: customTitle };
   if (profileAvatarDataDraft != null) {
     patch.avatarData = profileAvatarDataDraft;
     patch.avatarKey = 'default';

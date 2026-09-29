@@ -137,8 +137,8 @@ function isValidGender(v) {
 const APP_INFO = {
   name: '地球Online',
   enName: 'Earth Online',
-  version: '1.0.1',
-  buildDate: '2026-09-27',
+  version: '1.0.2',
+  buildDate: '2026-09-29',
   license: 'MIT',
   // 职责分工：二十七 负责数据，Cyou2 负责设计。
   developers: [
@@ -217,6 +217,18 @@ const PRIVACY_POLICY = [
  * 0.9.x 预览版，历史保留但不占正式版本号。
  */
 const CHANGELOG = [
+  {
+    version: '1.0.2',
+    date: '2026-09-29',
+    items: [
+      '经验规则统一（同步 Android v1.0.3）：任务/成就/日志/足迹/物品/照片六类来源收口为单一函数，连续记录另有加成',
+      '动态问候语：主页按时间段切换问候，感知最近心情追加关怀句，连续记录满 3 天附认可',
+      '连续记录成长：3/7/21/60 天四阶段（萌芽/抽枝/繁茂/参天）徽标，今天未记录给宽限不清零，断更只鼓励回归',
+      '报告智能总结：数据页日报/周报/月报/年报总结文案更有人味，空数据不打击',
+      '主页新增「今日一签」（每天确定性随机翻出一条过去）与「历年今日」回忆卡',
+      '季节限定徽章：主页标题区按当季展示春樱/夏夜/秋叶/冬雪徽章；物品描述改📖书签样式强调',
+    ],
+  },
   {
     version: '1.0.1',
     date: '2026-09-27',
@@ -397,6 +409,197 @@ function clampProgress(v) {
   return Math.min(100, Math.max(0, Math.round(n)));
 }
 
+/* ==================== XP / 连续记录 / 问候 / 季节（v1.0.2 · 口径与 Android XpRules/GrowthStreak/Greeting/SeasonTheme 完全一致） ====================
+ * 唯一口径原则：所有展示 XP / 连续天数 / 问候语 / 季节的地方一律调用这里，
+ * 不要再手写乘加表达式 —— 以前多个页面各写一份，改规则要改多处。
+ * Web 端没有记忆相册，photos 恒传 0（XpRules 允许缺省来源传 0）。 */
+
+/** 经验来源分值表（与 Android XpRules 常量一一对应） */
+const XP_RULES = {
+  TASK_DONE: 10,   // 每完成一个任务
+  ACHIEVEMENT: 50, // 每解锁一个成就
+  MEMO: 5,         // 每条世界日志
+  LOCATION: 8,     // 每处足迹
+  ITEM: 3,         // 背包每拾取一件物品
+  PHOTO: 2,        // 记忆相册每导入一张照片（Web 端暂无相册，恒为 0）
+};
+
+/** 累计经验总值（纯函数，所有端共用这一个口径）。缺省来源允许传 0。 */
+function xpTotal(tasksDone, achievements, memos, locations, items, photos) {
+  const n = function (v) { const x = Number(v); return isFinite(x) && x > 0 ? Math.floor(x) : 0; };
+  return n(tasksDone) * XP_RULES.TASK_DONE +
+    n(achievements) * XP_RULES.ACHIEVEMENT +
+    n(memos) * XP_RULES.MEMO +
+    n(locations) * XP_RULES.LOCATION +
+    n(items) * XP_RULES.ITEM +
+    n(photos) * XP_RULES.PHOTO;
+}
+
+/** 连续记录加成：坚持本身就有价值，3 天就有第一笔奖励，别让用户等到一周之后。 */
+function xpStreakBonus(streakDays) {
+  const d = Number(streakDays) || 0;
+  if (d >= 60) return 120;
+  if (d >= 30) return 50;
+  if (d >= 14) return 30;
+  if (d >= 7) return 20;
+  if (d >= 3) return 5;
+  return 0;
+}
+
+/** 等级称号：不搞花哨命名 —— 用户没自定义时一律「旅行者」，自定义过则完全以用户的为准。 */
+const XP_DEFAULT_TITLE = '旅行者';
+
+/** 自定义称号清洗：trim、截 12 字、空白回退默认 */
+function xpTitleFor(custom) {
+  const t = String(custom == null ? '' : custom).trim().slice(0, 12);
+  return t || XP_DEFAULT_TITLE;
+}
+
+/** 某存档的「有记录的日子」集合（世界日志 + 任务完成 + 足迹；与 Android GrowthStreak 口径一致，收藏不计） */
+function recordedDayKeys(st) {
+  const s = st || state || {};
+  const seen = {};
+  const push = function (v) { const d = dayKeyOf(v); if (d) seen[d] = 1; };
+  (Array.isArray(s.memos) ? s.memos : []).forEach(function (m) { if (m) push(m.createdAt); });
+  (Array.isArray(s.tasks) ? s.tasks : []).forEach(function (t) { if (t && t.doneAt) push(t.doneAt); });
+  (Array.isArray(s.locations) ? s.locations : []).forEach(function (l) { if (l && l.date) push(l.date); });
+  return Object.keys(seen).sort();
+}
+
+/** 当前连续记录天数。今天没有记录时从昨天起算（今天还没过完，不算断 —— 宽限今天）。 */
+function currentStreakDays(st) {
+  const keys = recordedDayKeys(st);
+  if (!keys.length) return 0;
+  const set = {};
+  keys.forEach(function (k) { set[k] = 1; });
+  const today = todayStr();
+  let cursor = (set[today]) ? parseDateStr(today) : addDays(parseDateStr(today), -1);
+  let streak = 0;
+  while (set[todayStr(cursor)]) {
+    streak++;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
+/** 生长阶段：0 无记录 · 1 萌芽(≥3) · 2 抽枝(≥7) · 3 繁茂(≥21) · 4 参天(≥60)。阈值刻意低。 */
+function streakStage(streakDays) {
+  const d = Number(streakDays) || 0;
+  if (d >= 60) return 4;
+  if (d >= 21) return 3;
+  if (d >= 7) return 2;
+  if (d >= 3) return 1;
+  return 0;
+}
+
+/** 阶段名（主页徽标展示） */
+function streakStageLabel(stage) {
+  switch (Number(stage) || 0) {
+    case 4: return '参天 🌳';
+    case 3: return '繁茂 🌿';
+    case 2: return '抽枝 ✨';
+    case 1: return '萌芽 🌱';
+    default: return '';
+  }
+}
+
+/** 回归鼓励语（不惩罚）：距上次记录已断 ≥2 天时给一句温和的邀请；从未记录或未断更返回 '' */
+function comebackMessage(st) {
+  const keys = recordedDayKeys(st);
+  if (!keys.length) return '';
+  const last = keys[keys.length - 1];
+  const gap = daysBetween(parseDateStr(last), parseDateStr(todayStr()));
+  if (!isFinite(gap) || gap < 2) return '';
+  return '有 ' + gap + ' 天没写日记了。回来继续，你的星球一直在。';
+}
+
+/** 某存档的累计经验（含连续记录加成）。所有 XP 展示处的唯一入口。 */
+function totalXpOf(st) {
+  const s = st || state || {};
+  const arr = function (v) { return Array.isArray(v) ? v : []; };
+  const tasksDone = arr(s.tasks).filter(function (t) { return t && t.status === 'done'; }).length;
+  const achs = arr(s.achievements).filter(function (a) { return a && a.unlocked; }).length;
+  const streak = currentStreakDays(s);
+  return xpTotal(tasksDone, achs, arr(s.memos).length, arr(s.locations).length, arr(s.items).length, 0) +
+    xpStreakBonus(streak);
+}
+
+/* ---------- 动态问候语（v1.0.2，与 Android Greeting.kt 同一份文案口径） ---------- */
+
+/** 心情关怀句：最近心情带着累/雨/低落等词时，多一句关心（正面心情不画蛇添足） */
+function greetingMoodCareLine(moodText) {
+  const t = String(moodText == null ? '' : moodText).trim();
+  if (!t) return '';
+  const lowKeyWords = ['累', '烦', '低落', '难过', '焦虑', '压力', 'emo', '丧', '哭', '失眠'];
+  const rainWords = ['雨', '阴', '降温'];
+  let hit = false;
+  let i;
+  for (i = 0; i < lowKeyWords.length; i++) { if (t.indexOf(lowKeyWords[i]) !== -1) { hit = true; break; } }
+  if (hit) return '无论晴雨，你的记录都在';
+  for (i = 0; i < rainWords.length; i++) { if (t.indexOf(rainWords[i]) !== -1) return '外面天气一般，愿心里有光'; }
+  return '';
+}
+
+/**
+ * 组装问候语：时段问候 · 心情关怀 · 连续认可。
+ * @param {number} hour 当前小时 0-23
+ * @param {string|null} latestMoodText 最近一条「心情」类日志文本（可为空）
+ * @param {number} streakDays 连续记录天数（≥3 时附认可）
+ */
+function greetingBuild(hour, latestMoodText, streakDays) {
+  const h = Number(hour);
+  let base;
+  if (h >= 0 && h <= 4) base = '夜深了，早点休息';
+  else if (h <= 8) base = '早上好，新的一天开始了';
+  else if (h <= 11) base = '上午好，今天想推进点什么？';
+  else if (h <= 13) base = '午安，记得吃口饭';
+  else if (h <= 17) base = '下午好，慢慢来也可以';
+  else if (h <= 22) base = '晚上好，今天辛苦了';
+  else base = '夜深了，今天辛苦了';
+  const parts = [base];
+  const moodLine = greetingMoodCareLine(latestMoodText);
+  if (moodLine) parts.push(moodLine);
+  const d = Number(streakDays) || 0;
+  if (d >= 3) parts.push('已连续记录 ' + d + ' 天 🔥');
+  return parts.join(' · ');
+}
+
+/** 最近一条「心情」类日志文本（无则 ''） */
+function latestMoodTextOf(st) {
+  const s = st || state || {};
+  let latest = null;
+  (Array.isArray(s.memos) ? s.memos : []).forEach(function (m) {
+    if (m && m.type === 'mood' && m.text) {
+      if (!latest || String(m.createdAt || '') > String(latest.createdAt)) latest = m;
+    }
+  });
+  return latest ? String(latest.text || '') : '';
+}
+
+/* ---------- 季节限定（v1.0.2，与 Android SeasonTheme.kt 同一切分：立春 2/4、立夏 5/5、立秋 8/7、立冬 11/7） ---------- */
+
+const SEASONS = [
+  { id: 'spring', label: '春樱季', emoji: '🌸', accent: '#d98ba4' },
+  { id: 'summer', label: '夏夜季', emoji: '🌙', accent: '#6e9bc5' },
+  { id: 'autumn', label: '秋叶季', emoji: '🍂', accent: '#c97b3d' },
+  { id: 'winter', label: '冬雪季', emoji: '❄️', accent: '#8faec4' },
+];
+
+/** 按四立节气近似切分的当季（month1based：1-12） */
+function seasonOf(month1based, day) {
+  const m = Number(month1based), d = Number(day);
+  if ((m === 2 && d >= 4) || (m >= 3 && m <= 4) || (m === 5 && d < 5)) return SEASONS[0];
+  if ((m === 5 && d >= 5) || (m >= 6 && m <= 7) || (m === 8 && d < 7)) return SEASONS[1];
+  if ((m === 8 && d >= 7) || (m >= 9 && m <= 10) || (m === 11 && d < 7)) return SEASONS[2];
+  return SEASONS[3];
+}
+
+/** 今天当季 */
+function seasonCurrent() {
+  const now = new Date();
+  return seasonOf(now.getMonth() + 1, now.getDate());
+}
+
 /* ==================== 等级 / 生日计算 ==================== */
 
 /** 计算周岁年龄（等级 = 年龄，一年一级） */
@@ -480,6 +683,8 @@ function defaultProfile() {
     country: '',          // v19 新增：区服-国家（AUTH_COUNTRIES）
     province: '',         // v19 新增：区服-省份（CHINA_PROVINCES）
     signature: '',
+    customTitle: '',      // v1.0.2：自定义称号（空 = 用默认「旅行者」，展示走 xpTitleFor）
+    wornBadges: [],       // v1.0.2：徽章墙 —— 从已解锁成就中佩戴的成就 id，最多 3 枚
     customFields: [],     // 有序数组，渲染顺序 = 用户排列顺序，上限 20 条
   };
 }
@@ -917,6 +1122,12 @@ function sanitizeProfile(raw) {
   p.province = typeof raw.province === 'string' ? raw.province.slice(0, 30) : '';
   p.signature = typeof raw.signature === 'string'
     ? raw.signature.slice(0, PROFILE_LIMITS.signatureMax) : '';
+  // v1.0.2：自定义称号（≤12 字，展示清洗走 xpTitleFor；存原始值，空表示用默认）
+  p.customTitle = typeof raw.customTitle === 'string' ? raw.customTitle.slice(0, 12) : '';
+  // v1.0.2：徽章墙（已解锁成就 id 数组，最多 3 枚；畸形项与非字符串剔除，超限截断）
+  p.wornBadges = (Array.isArray(raw.wornBadges) ? raw.wornBadges : [])
+    .filter(function (id) { return typeof id === 'string' && id; })
+    .slice(0, 3);
   p.avatarKey = isValidAvatarKey(raw.avatarKey) ? raw.avatarKey : 'default';
   p.avatarData = isValidAvatarData(raw.avatarData) ? raw.avatarData : null;
   // 自定义字段：支持两种来源，统一归一化为数组（{id,label,value}）
@@ -1499,6 +1710,15 @@ function updateProfile(patch) {
   if (data.signature !== undefined) {
     p.signature = String(data.signature).slice(0, PROFILE_LIMITS.signatureMax);
   }
+  // v1.0.2：自定义称号与徽章墙
+  if (data.customTitle !== undefined) {
+    p.customTitle = String(data.customTitle == null ? '' : data.customTitle).trim().slice(0, 12);
+  }
+  if (data.wornBadges !== undefined) {
+    p.wornBadges = (Array.isArray(data.wornBadges) ? data.wornBadges : [])
+      .filter(function (id) { return typeof id === 'string' && id; })
+      .slice(0, 3);
+  }
   if (data.country !== undefined) {
     p.country = String(data.country).trim().slice(0, 30);
   }
@@ -1983,4 +2203,40 @@ function deleteLocation(id) {
   /* v16：运行时模块装载器 */
   E.ensureModule = ensureModule;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.ensureModule === "undefined") globalThis.ensureModule = ensureModule; } catch (e) {}
+
+  /* v1.0.2：XP / 连续记录 / 问候 / 季节（口径与 Android 一致，被各页面模块裸调） */
+  E.XP_RULES = XP_RULES;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.XP_RULES === "undefined") globalThis.XP_RULES = XP_RULES; } catch (e) {}
+  E.xpTotal = xpTotal;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.xpTotal === "undefined") globalThis.xpTotal = xpTotal; } catch (e) {}
+  E.xpStreakBonus = xpStreakBonus;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.xpStreakBonus === "undefined") globalThis.xpStreakBonus = xpStreakBonus; } catch (e) {}
+  E.XP_DEFAULT_TITLE = XP_DEFAULT_TITLE;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.XP_DEFAULT_TITLE === "undefined") globalThis.XP_DEFAULT_TITLE = XP_DEFAULT_TITLE; } catch (e) {}
+  E.xpTitleFor = xpTitleFor;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.xpTitleFor === "undefined") globalThis.xpTitleFor = xpTitleFor; } catch (e) {}
+  E.recordedDayKeys = recordedDayKeys;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.recordedDayKeys === "undefined") globalThis.recordedDayKeys = recordedDayKeys; } catch (e) {}
+  E.currentStreakDays = currentStreakDays;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.currentStreakDays === "undefined") globalThis.currentStreakDays = currentStreakDays; } catch (e) {}
+  E.streakStage = streakStage;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.streakStage === "undefined") globalThis.streakStage = streakStage; } catch (e) {}
+  E.streakStageLabel = streakStageLabel;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.streakStageLabel === "undefined") globalThis.streakStageLabel = streakStageLabel; } catch (e) {}
+  E.comebackMessage = comebackMessage;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.comebackMessage === "undefined") globalThis.comebackMessage = comebackMessage; } catch (e) {}
+  E.totalXpOf = totalXpOf;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.totalXpOf === "undefined") globalThis.totalXpOf = totalXpOf; } catch (e) {}
+  E.greetingBuild = greetingBuild;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.greetingBuild === "undefined") globalThis.greetingBuild = greetingBuild; } catch (e) {}
+  E.greetingMoodCareLine = greetingMoodCareLine;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.greetingMoodCareLine === "undefined") globalThis.greetingMoodCareLine = greetingMoodCareLine; } catch (e) {}
+  E.latestMoodTextOf = latestMoodTextOf;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.latestMoodTextOf === "undefined") globalThis.latestMoodTextOf = latestMoodTextOf; } catch (e) {}
+  E.SEASONS = SEASONS;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.SEASONS === "undefined") globalThis.SEASONS = SEASONS; } catch (e) {}
+  E.seasonOf = seasonOf;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.seasonOf === "undefined") globalThis.seasonOf = seasonOf; } catch (e) {}
+  E.seasonCurrent = seasonCurrent;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.seasonCurrent === "undefined") globalThis.seasonCurrent = seasonCurrent; } catch (e) {}
 })();

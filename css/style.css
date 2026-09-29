@@ -2360,3 +2360,111 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
   /* 模态框在小屏更贴边 */
   .modal-wide { width: 94vw; }
 }
+
+/* ==================== v1.0.2：体验升级（问候 / 连续 / 季节 / 一签 / 回忆 / 徽章墙 / 总结 / 物品故事） ==================== */
+
+/* 季节限定徽章（主页标题区） */
+.season-badge {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  vertical-align: middle;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.9;
+}
+
+/* 动态问候语（标题下方） */
+.home-greeting {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted, #7a7268);
+}
+.streak-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(212, 163, 115, 0.16);
+  color: #8a5a2e;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* 回归鼓励（不惩罚，只邀请） */
+.comeback-card {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(138, 170, 138, 0.14);
+  color: #4c6b4c;
+  font-size: 13px;
+}
+
+/* 主页 hero 经验行 */
+.hero-xp { font-size: 12px; color: var(--muted, #7a7268); margin-top: 4px; }
+.hero-xp strong { color: #8a5a2e; }
+
+/* 历年今日回忆卡 */
+.memory-card { margin: 10px 0; }
+.memory-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; }
+.memory-icon { flex: none; }
+.memory-more, .memory-foot { margin-top: 6px; font-size: 12px; }
+
+/* 今日一签 */
+.luck-card { margin: 10px 0; }
+.luck-body { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 14px; }
+.luck-icon { flex: none; font-size: 18px; }
+.luck-foot { margin-top: 6px; font-size: 12px; }
+
+/* 人生卡片：称号 / 经验 / 徽章墙 */
+.life-card-title {
+  margin: 2px 0 8px;
+  font-size: 13px;
+  color: var(--muted, #7a7268);
+}
+.life-card-xp { font-size: 13px; margin: 8px 0 4px; color: var(--muted, #7a7268); }
+.life-card-xp strong { color: #8a5a2e; }
+.life-card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.worn-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(212, 163, 115, 0.18);
+  color: #8a5a2e;
+  font-size: 12px;
+  font-weight: 600;
+}
+.life-card-badge-btn { margin-top: 6px; }
+
+/* 徽章墙选择器（模态） */
+.badge-wall-list { max-height: 46vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.badge-wall-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border, #e8e2da);
+  background: transparent; cursor: pointer; text-align: left;
+}
+.badge-wall-item.worn { border-color: #d4a373; background: rgba(212, 163, 115, 0.12); }
+.badge-wall-star { flex: none; color: #c49a6c; }
+.badge-wall-title { flex: 1; font-size: 13px; }
+.badge-wall-state { flex: none; font-size: 12px; color: var(--muted, #7a7268); }
+
+/* 数据页：智能总结与经验行 */
+.dash-summary {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted, #7a7268);
+}
+.dash-xp-line strong, .dash-xp-line { color: #8a5a2e; }
+.dash-xp-line { font-weight: 600; }
+
+/* 物品故事卡：📖 书签样式强调 */
+.item-story {
+  display: flex; gap: 6px; align-items: baseline;
+  border-left: 3px solid #d4a373;
+  padding-left: 8px;
+  color: #5b4a36;
+}
+.item-story-mark { flex: none; }
