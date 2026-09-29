@@ -149,6 +149,7 @@ const APP_INFO = {
   sponsors: [
     { name: '海神唐三' },
     { name: 'Seastar' },
+    { name: '清浅' },
   ],
   repo: '地球Online · 人生记录',
 };
