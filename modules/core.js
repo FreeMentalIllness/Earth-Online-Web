@@ -1949,7 +1949,10 @@ function addLocation(data) {
 /** 更新足迹（patch: {name?, lat?, lng?, date?, note?, tags?}）→ entry | null */
 function updateLocation(id, patch) {
   const entry = getLocationById(id);
-  if (!entry) return null;
+  // v1.0.3：返回统一 {ok, entry} 结构（与 addLocation 对齐）。
+  // 此前返回裸 entry 对象，handleMapSave 用 `!res.ok` 判定时 res.ok 为 undefined → 误报「保存失败」，
+  // 但 saveState 已落盘，故「刷新后实际已保存」。现在成功明确返回 ok:true。
+  if (!entry) return { ok: false, error: '足迹不存在', entry: null };
   const data = patch || {};
   if (data.name !== undefined && String(data.name).trim()) entry.name = String(data.name).trim();
   if (data.lat !== undefined || data.lng !== undefined) {
@@ -1963,7 +1966,8 @@ function updateLocation(id, patch) {
   if (data.note !== undefined) entry.note = String(data.note).trim().slice(0, PROFILE_LIMITS.fieldValueMax);
   if (data.tags !== undefined) entry.tags = parseTagsInput(data.tags);
   saveState();
-  return entry;
+  if (typeof checkAutoAchievements === 'function') checkAutoAchievements();
+  return { ok: true, entry: entry };
 }
 
 /** 删除足迹 */

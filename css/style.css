@@ -2468,3 +2468,89 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
   color: #5b4a36;
 }
 .item-story-mark { flex: none; }
+
+/* ==================== v1.0.3：新增 / 优化样式 ==================== */
+
+/* 主页「最近动态」卡片标题行 + 查看链接 */
+.card-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-head-link {
+  font-size: 12px; font-weight: 600; color: var(--amber-deep);
+  background: transparent; border: none; cursor: pointer; padding: 2px 4px;
+  border-radius: var(--radius-control); transition: var(--transition);
+}
+.card-head-link:hover { background: var(--bg-soft); color: var(--amber); }
+
+/* 背包分类标签栏：常驻于「分类管理」按钮右侧、可横向滚动 */
+.bp-cat-bar { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
+.bp-cat-row {
+  display: flex; gap: 8px; flex: 1; min-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.bp-cat-row::-webkit-scrollbar { display: none; }
+.bp-cat-chip {
+  flex: 0 0 auto; white-space: nowrap;
+  padding: 5px 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: var(--bg-soft);
+  color: var(--muted); font-size: var(--font-caption); font-weight: 600;
+  cursor: pointer; transition: var(--transition);
+}
+.bp-cat-chip:hover { border-color: var(--amber); color: var(--text); }
+.bp-cat-chip.active {
+  background: var(--amber); border-color: var(--amber);
+  color: #fff; box-shadow: var(--shadow-glass);
+}
+
+/* 通用图片裁剪模态（保留原图分辨率与画质） */
+.crop-stage {
+  position: relative; width: 100%; height: 340px;
+  background: #1c1a17; border-radius: var(--radius-control);
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  touch-action: none; user-select: none;
+}
+.crop-stage img { max-width: 100%; max-height: 100%; display: block; pointer-events: none; }
+.crop-box {
+  position: absolute; border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.45); cursor: move; box-sizing: border-box;
+}
+.crop-grid {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px) 0 0 / 100% 33.33%,
+    linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px) 0 0 / 33.33% 100%;
+  pointer-events: none;
+}
+.crop-handle {
+  position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px;
+  background: #fff; border: 2px solid var(--amber); border-radius: 50%;
+  cursor: nwse-resize; touch-action: none;
+}
+.crop-bar { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; }
+.crop-bar-label { font-size: 12px; color: var(--muted); }
+.crop-bar input[type="range"] { flex: 1; accent-color: var(--amber); }
+
+/* 数据页日历底部：选中日详情美化（与治愈系 UI 统一） */
+.cal-detail { margin-top: 4px; }
+.cal-detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.cal-detail-grid > div { min-width: 0; }
+.detail-sub {
+  font-size: 12px; font-weight: 700; color: var(--amber-deep);
+  letter-spacing: .04em; margin-bottom: 8px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-item { font-size: 13px; line-height: 1.5; padding: 5px 0; color: var(--text); }
+.cal-note-block { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--border-strong); }
+.cal-note-title { font-size: 13px; font-weight: 600; color: var(--text-strong); margin-bottom: 8px; }
+.cal-note-textarea {
+  width: 100%; min-height: 72px; resize: vertical;
+  padding: 10px 12px; border-radius: var(--radius-control);
+  border: 1px solid var(--border); background: var(--bg-soft);
+  color: var(--text); font-size: var(--font-body); font-family: inherit;
+  transition: var(--transition);
+}
+.cal-note-textarea:focus { outline: none; border-color: var(--amber); background: var(--panel); }
+.cal-note-block .modal-actions { margin-top: 10px; justify-content: flex-end; }
+
+@media (max-width: 600px) {
+  .cal-detail-grid { grid-template-columns: 1fr; gap: 14px; }
+}

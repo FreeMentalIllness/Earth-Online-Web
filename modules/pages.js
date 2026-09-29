@@ -197,6 +197,174 @@ function closeModal() {
   if (typeof navStack !== 'undefined' && navStack.length) navStack.pop();
 }
 
+/* ==================== v1.0.3：通用图片裁剪模态（保留原图分辨率与画质） ==================== */
+/**
+ * 打开图片裁剪模态：用户可拖拽移动选区、拖角缩放、或用滑块缩放，确认后按原图分辨率裁剪输出。
+ * 关键约束（用户要求）：绝不降采样、绝不通过压缩参数降低画质。
+ *   - 输出尺寸 = 选区在原图中的真实像素尺寸（scale = naturalWidth / 展示宽度），不做任何缩小。
+ *   - 输出格式沿用原图（PNG 无损 / JPEG 质量 1.0）。
+ * @param {object} opts { src, title, aspect(数值|null 锁比例), circle(仅影响展示蒙版), onCropped(dataUrl) }
+ */
+function openImageCropModal(opts) {
+  opts = opts || {};
+  const src = opts.src || '';
+  const aspect = (typeof opts.aspect === 'number') ? opts.aspect : null;
+  const onCropped = (typeof opts.onCropped === 'function') ? opts.onCropped : function () {};
+  openModal(
+    '<h3 class="modal-title">' + escapeHtml(opts.title || '裁剪图片') + '</h3>' +
+    '<div class="crop-stage" id="cropStage">' +
+      '<img id="cropImg" src="' + src + '" alt="待裁剪图片">' +
+      '<div class="crop-box" id="cropBox">' +
+        '<span class="crop-grid"></span>' +
+        '<span class="crop-handle" id="cropHandle"></span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="crop-bar">' +
+      '<span class="crop-bar-label">缩放</span>' +
+      '<input type="range" id="cropZoom" min="20" max="100" value="80">' +
+    '</div>' +
+    '<div class="modal-error" id="cropErr"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-ghost" id="cropCancel">取消</button>' +
+      '<button class="btn btn-primary" id="cropConfirm">确定裁剪</button>' +
+    '</div>'
+  );
+  const stage = document.getElementById('cropStage');
+  const img = document.getElementById('cropImg');
+  const box = document.getElementById('cropBox');
+  const handle = document.getElementById('cropHandle');
+  const zoom = document.getElementById('cropZoom');
+  const errEl = document.getElementById('cropErr');
+  let imgRect = null;            // 图片在 stage 内的矩形 {left, top, width, height}
+  let boxRect = { left: 0, top: 0, width: 0, height: 0 };
+
+  function clampBox() {
+    if (!imgRect) return;
+    const minS = 24;
+    if (boxRect.width < minS) boxRect.width = minS;
+    if (boxRect.height < minS) boxRect.height = minS;
+    if (boxRect.left < imgRect.left) boxRect.left = imgRect.left;
+    if (boxRect.top < imgRect.top) boxRect.top = imgRect.top;
+    if (boxRect.left + boxRect.width > imgRect.left + imgRect.width)
+      boxRect.left = imgRect.left + imgRect.width - boxRect.width;
+    if (boxRect.top + boxRect.height > imgRect.top + imgRect.height)
+      boxRect.top = imgRect.top + imgRect.height - boxRect.height;
+    if (boxRect.left < imgRect.left) boxRect.left = imgRect.left;
+    if (boxRect.top < imgRect.top) boxRect.top = imgRect.top;
+  }
+  function applyBox() {
+    box.style.left = (boxRect.left - imgRect.left) + 'px';
+    box.style.top = (boxRect.top - imgRect.top) + 'px';
+    box.style.width = boxRect.width + 'px';
+    box.style.height = boxRect.height + 'px';
+  }
+  function initBox() {
+    const r = img.getBoundingClientRect();
+    const s = stage.getBoundingClientRect();
+    imgRect = { left: r.left - s.left, top: r.top - s.top, width: r.width, height: r.height };
+    let w = Math.min(imgRect.width, imgRect.height) * 0.8;
+    let h = aspect ? w / aspect : w;
+    if (h > imgRect.height) { h = imgRect.height * 0.8; w = aspect ? h * aspect : w; }
+    boxRect = {
+      width: w, height: h,
+      left: imgRect.left + (imgRect.width - w) / 2,
+      top: imgRect.top + (imgRect.height - h) / 2
+    };
+    applyBox();
+  }
+  function setupImage() {
+    if (img.complete && img.naturalWidth) initBox();
+    else img.onload = initBox;
+    img.onerror = function () { if (errEl) errEl.textContent = '图片加载失败，请重试'; };
+  }
+
+  let drag = null;
+  box.addEventListener('pointerdown', function (e) {
+    if (e.target === handle) return;
+    drag = { x: e.clientX, y: e.clientY, l: boxRect.left, t: boxRect.top };
+    box.setPointerCapture && box.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  handle.addEventListener('pointerdown', function (e) {
+    drag = { mode: 'resize', x: e.clientX, y: e.clientY, w: boxRect.width, h: boxRect.height };
+    handle.setPointerCapture && handle.setPointerCapture(e.pointerId);
+    e.preventDefault(); e.stopPropagation();
+  });
+  function onMove(e) {
+    if (!drag || !imgRect) return;
+    if (drag.mode === 'resize') {
+      const dw = (e.clientX - drag.x);
+      let w = drag.w + dw;
+      let h = aspect ? w / aspect : drag.h + (e.clientY - drag.y);
+      boxRect.width = w; boxRect.height = h;
+    } else {
+      boxRect.left = drag.l + (e.clientX - drag.x);
+      boxRect.top = drag.t + (e.clientY - drag.y);
+    }
+    clampBox(); applyBox();
+  }
+  function onUp() { drag = null; }
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+
+  if (zoom) zoom.addEventListener('input', function () {
+    if (!imgRect) return;
+    const cx = boxRect.left + boxRect.width / 2;
+    const cy = boxRect.top + boxRect.height / 2;
+    let w = Math.min(imgRect.width, imgRect.height) * (zoom.value / 100);
+    let h = aspect ? w / aspect : w;
+    boxRect.width = w; boxRect.height = h;
+    boxRect.left = cx - w / 2; boxRect.top = cy - h / 2;
+    clampBox(); applyBox();
+  });
+
+  document.getElementById('cropCancel').onclick = function () {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    closeModal();
+  };
+  document.getElementById('cropConfirm').onclick = function () {
+    if (!imgRect) { if (errEl) errEl.textContent = '图片尚未加载完成'; return; }
+    try {
+      const scale = img.naturalWidth / imgRect.width;
+      const sx = (boxRect.left - imgRect.left) * scale;
+      const sy = (boxRect.top - imgRect.top) * scale;
+      const sw = boxRect.width * scale;
+      const sh = boxRect.height * scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sw));
+      canvas.height = Math.max(1, Math.round(sh));
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      // 沿用原图格式：PNG 无损、JPEG 质量 1.0（不降质）
+      const mime = (String(img.src).indexOf('data:image/png') === 0) ? 'image/png' : 'image/jpeg';
+      const out = canvas.toDataURL(mime, 1.0);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      closeModal();
+      onCropped(out);
+    } catch (err) {
+      if (errEl) errEl.textContent = '裁剪失败：' + (err && err.message ? err.message : err);
+    }
+  };
+
+  setupImage();
+}
+
+/** dataURL → Blob（壁纸存入 IndexedDB 用；原图画质直转，不重编码压缩） */
+function dataUrlToBlob(dataUrl) {
+  try {
+    const idx = String(dataUrl).indexOf(',');
+    const head = dataUrl.slice(0, idx);
+    const b64 = dataUrl.slice(idx + 1);
+    const mime = (head.match(/data:([^;]+)/) || [, 'image/png'])[1];
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  } catch (e) { return null; }
+}
+
 /* ---------- v1.2.0：心情 / 表情包入口 ----------
  * 点一下就记一条「心情」类型的日志（type='mood'），不用打字。
  * 表情本身作为日志正文 —— 纯 emoji 日志会触发隐藏彩蛋，属于有意设计。 */
@@ -624,7 +792,8 @@ function renderHome() {
       '</div>' +
 
       '<div class="card act-card">' +
-        '<div class="card-title">📡 最近动态</div>' +
+        '<div class="card-title card-title-row">📡 最近动态' +
+          '<button class="card-head-link" data-action="nav" data-page="data">查看 ›</button></div>' +
         '<div class="act-list">' + actRows + '</div>' +
       '</div>' +
 
@@ -1176,23 +1345,37 @@ function promptAcquireQueue(names) {
 
 /* ==================== 背包装备 ==================== */
 
+let backpackCatFilter = 'all';   // v1.0.3：背包分类筛选（'all' = 不过滤）
+
 function renderBackpack() {
   const collectionCount = state.collections.length;
   const isCollection = backpackTab === 'collection';
   const keyword = String(backpackSearch || '').trim().toLowerCase();
+  const cats = getItemCategoryList();
 
-  // 分类 chips：仅「全部」与「收藏夹」两项（v10 简化：自定义分类不再作为顶部 Tab，
-  // 仅以卡片徽章显示，可按下方搜索框按名称 / 分类名筛选）
   const chips = ['<button class="tab ' + (backpackTab === 'all' || !backpackTab ? 'active' : '') +
       '" data-action="backpack-tab" data-tab="all">📦 物品（' + state.items.length + '）</button>']
     .concat(['<button class="tab ' + (isCollection ? 'active' : '') + '" data-action="backpack-tab" data-tab="collection">⭐ 收藏夹（' + collectionCount + '）</button>'])
     .join('');
 
+  // v1.0.3：分类标签栏 —— 常驻展示在「分类管理」按钮右侧，物品 / 收藏夹两视图均可见、可横向滚动。
+  // 新建分类后立即出现；点击按分类筛选物品（在收藏夹视图下点击则切回物品视图并应用筛选）。
+  const catChips = ['<button class="bp-cat-chip ' + (backpackCatFilter === 'all' ? 'active' : '') +
+      '" data-action="bp-cat-filter" data-cat="all">全部</button>']
+    .concat(cats.map(function (c) {
+      return '<button class="bp-cat-chip ' + (backpackCatFilter === c.id ? 'active' : '') +
+        '" data-action="bp-cat-filter" data-cat="' + c.id + '">' + escapeHtml(c.name) + '</button>';
+    })).join('');
+  const catBar = '<div class="bp-cat-bar">' +
+      '<button class="btn btn-ghost btn-sm" data-action="manage-categories">⚙️ 分类管理</button>' +
+      (cats.length ? '<div class="bp-cat-row">' + catChips + '</div>' : '') +
+    '</div>';
+
   let body;
   if (isCollection) {
     body = renderCollectionsTab();
   } else {
-    // 物品视图：按搜索词过滤（名称 / 描述 / 分类名），以网格呈现，分类仅作卡片徽章
+    // 物品视图：先按搜索词过滤（名称 / 描述 / 分类名），再按当前选中的分类筛选
     let list = state.items.slice();
     if (keyword) {
       list = list.filter(function (i) {
@@ -1202,20 +1385,17 @@ function renderBackpack() {
           (cat && cat.name.toLowerCase().indexOf(keyword) !== -1);
       });
     }
+    if (backpackCatFilter && backpackCatFilter !== 'all') {
+      list = list.filter(function (i) { return i.category === backpackCatFilter; });
+    }
     body = list.length
       ? '<div class="item-grid bp-grid">' + list.map(renderItemCard).join('') + '</div>'
       : (state.items.length
-        ? '<div class="card empty">🔍 没有匹配「' + escapeHtml(backpackSearch) + '」的物品</div>'
+        ? '<div class="card empty">🔍 没有匹配的物品</div>'
         : emptyStateHtml('🎒', '背包还是空的',
             '把你拥有的、想留下的东西登记进来：一台相机、一本读到一半的书、一张还没用的券。以后翻背包就像翻自己的人生清单。',
             '<button class="btn btn-primary" data-action="item-new">添加第一件物品</button>'));
   }
-
-  const manageBtn = isCollection
-    ? ''
-    : '<div class="bp-filter-row">' +
-        '<button class="btn btn-ghost btn-sm" data-action="manage-categories">⚙️ 分类管理</button>' +
-      '</div>';
 
   document.getElementById('content').innerHTML =
     '<section class="page">' +
@@ -1231,7 +1411,7 @@ function renderBackpack() {
           '<input id="backpackSearch" class="list-input" data-action="backpack-search" ' +
             'placeholder="搜索名称 / 分类" value="' + escapeHtml(backpackSearch) + '">' +
         '</div>') +
-      manageBtn +
+      catBar +
       body +
     '</section>';
 }
@@ -2621,6 +2801,12 @@ function bindGlobalEvents() {
         backpackTab = btn.dataset.tab;
         renderBackpack();
         break;
+      case 'bp-cat-filter':
+        backpackCatFilter = btn.dataset.cat || 'all';
+        // 收藏夹视图下点击分类 → 切回物品视图再应用筛选，与现有筛选逻辑兼容
+        if (backpackTab === 'collection') backpackTab = 'all';
+        renderBackpack();
+        break;
       case 'item-new':
         openItemModal(null, '', null);
         break;
@@ -3106,17 +3292,31 @@ function bindGlobalEvents() {
             toast('当前环境不支持本地数据库，无法保存壁纸');
             return;
           }
-          // v19（需求7）：大图先压缩（最长边 1920 / q0.8 / ≤2MB），小图直存
-          compressWallpaperFile(f, function (blob) {
-            EarthIDB.idbSet('wallpaper_blob', blob).then(function () {
-              try {
-                if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.set === 'function') EOStore.set('earth_wallpaper', { type: 'image' });
-                else localStorage.setItem('earth_wallpaper', JSON.stringify({ type: 'image' }));
-              } catch (e) {}
-              if (typeof EarthBus !== 'undefined' && EarthBus) EarthBus.emit('ui:apply-wallpaper');
-              toast('壁纸已更新');
-            }).catch(function () { toast('壁纸保存失败，请重试'); });
-          });
+          const reader = new FileReader();
+          reader.onload = function () {
+            const dataUrl = String(reader.result || '');
+            if (!dataUrl) { toast('图片读取失败，请重试'); return; }
+            // v1.0.3：保留原图分辨率与画质，提供自定义裁剪（自由比例）；不降采样、不压缩。
+            openImageCropModal({
+              src: dataUrl,
+              title: '裁剪壁纸',
+              aspect: null,
+              onCropped: function (cropped) {
+                const blob = dataUrlToBlob(cropped);
+                if (!blob) { toast('壁纸处理失败，请重试'); return; }
+                EarthIDB.idbSet('wallpaper_blob', blob).then(function () {
+                  try {
+                    if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.set === 'function') EOStore.set('earth_wallpaper', { type: 'image' });
+                    else localStorage.setItem('earth_wallpaper', JSON.stringify({ type: 'image' }));
+                  } catch (e) {}
+                  if (typeof EarthBus !== 'undefined' && EarthBus) EarthBus.emit('ui:apply-wallpaper');
+                  toast('壁纸已更新');
+                }).catch(function () { toast('壁纸保存失败，请重试'); });
+              }
+            });
+          };
+          reader.onerror = function () { toast('图片读取失败，请重试'); };
+          reader.readAsDataURL(f);
         };
         inp.click();
         break;

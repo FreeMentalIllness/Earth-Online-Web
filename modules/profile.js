@@ -292,7 +292,7 @@ function renderProfile() {
             '<span class="field-label">头像</span>' +
             '<div class="avatar-grid">' + avatarCells + '</div>' +
             '<button type="button" class="btn btn-ghost btn-sm" data-action="profile-avatar-upload">' +
-              '上传本地图片（≤100KB）</button>' +
+              '上传本地图片（原图 · 可裁剪）</button>' +
           '</div>' +
           '<div class="list-row">' +
             '<label class="field-label" for="profileGender">性别</label>' +
@@ -445,11 +445,11 @@ function triggerProfileAvatarUpload() {
   input.click();
 }
 
-/** 读取头像文件：超 5MB 拒绝并清空选择框；符合才转 Base64（保存后生效） */
+/** 读取头像文件：保留原始分辨率与画质，经裁剪模态按原图尺寸裁剪后存入草稿 */
 function readAvatarFile(file, input) {
   if (!file) return;
   if (file.size > AVATAR_MAX_BYTES) {
-    toast('头像图片大小不能超过 5MB，请压缩后重新上传');
+    toast('头像图片大小不能超过 5MB（本地存储容量限制，原图画质不受影响）');
     if (input) input.value = ''; // 清空文件选择框，避免遗留选中态
     return;
   }
@@ -457,16 +457,30 @@ function readAvatarFile(file, input) {
   reader.onload = function () {
     const dataUrl = String(reader.result || '');
     if (!isValidAvatarData(dataUrl)) {
-      toast('图片过大或格式不支持，请压缩到 5MB 以内的 JPG/PNG 后重试');
+      toast('图片格式不支持，请使用 JPG / PNG 后重试');
       return;
     }
-    // v5（图片懒加载/压缩）：超 200KB 的位图头像先降维压缩（≤256px、JPEG 0.82），
-    // 再存入草稿。既省 localStorage 体积，也避免大图解码/缩放拖累渲染（尤其移动端）。
-    compressAvatarIfNeeded(dataUrl, function (compressed) {
-      profileAvatarDataDraft = compressed;
-      profileAvatarKeyDraft = null; // 自定义头像优先于内置选择
+    // v1.0.3：不再降采样压缩（移除旧 512px 缩放逻辑）。
+    // 改为打开裁剪模态，用户可拖拽/缩放选区，确认后按原图分辨率、无损输出，保留画质。
+    if (typeof openImageCropModal !== 'function') {
+      // 兜底（极简环境无裁剪能力）：直接保留原图，绝不降质
+      profileAvatarDataDraft = dataUrl;
+      profileAvatarKeyDraft = null;
       updateProfileAvatarPreview();
       toast('头像已就绪，点击「保存资料」生效');
+      return;
+    }
+    openImageCropModal({
+      src: dataUrl,
+      title: '裁剪头像',
+      aspect: 1,        // 正方形（前端以圆形展示，无需圆形蒙版）
+      circle: true,
+      onCropped: function (cropped) {
+        profileAvatarDataDraft = cropped;
+        profileAvatarKeyDraft = null; // 自定义头像优先于内置选择
+        updateProfileAvatarPreview();
+        toast('头像已就绪，点击「保存资料」生效');
+      }
     });
   };
   reader.onerror = function () {
