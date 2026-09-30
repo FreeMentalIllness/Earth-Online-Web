@@ -24,6 +24,7 @@ let achCategoryFilter = 'all';      // 成就页类别筛选（all | 类别 key 
 let achOnlyUnlocked = false;
 let taskFilter = 'all';           // 任务页分类筛选：all | main | side | todo
 let taskDueFilter = false;        // v15 修复：记账页「📅 到期任务提醒」跳转后，任务页仅展示即将到期（含已过期）的 To Do
+let taskHideDone = false;         // v1.0.3 迭代 2：隐藏已完成任务（偏好持久化在 earth_ui_prefs.hideDoneTasks）
 
 /** Web Audio 合成「叮」声（零依赖，无需音频文件）；环境不支持时静默降级 */
 let __dingCtx = null;
@@ -587,16 +588,15 @@ function renderHome() {
     '</button>';
   }).join('');
 
-  /* 3. v1.0.3 迭代：快速入口 8 个（两行四列），纯动作型 + 移动端必需入口。
-     此前「查看成就 / 系统」分别与概览卡「成就」、底部 Tab「系统」重复，已移除；
-     补入「新收藏 / 记足迹」两个高频动作，全格无一与底部导航 / 概览卡重复。 */
+  /* 3. v1.0.3 迭代 2：快速入口 6 个（两行三列），按用户反馈彻底去重——
+     「记足迹」与底部 Tab「足迹」重复 → 移除，保留语义更直白的「足迹地图」；
+     「今日日程」与「新建任务」同指任务域 → 移除，保留动作型「新建任务」；
+     「心情」入口取消；补入「日历视图」直达（与任务页头部入口同语义，无重复）。 */
   const quickDefs = [
     { action: 'home-new-task', icon: '📝', label: '新建任务' },
     { action: 'home-add-item', icon: '🎒', label: '添加物品' },
     { action: 'home-add-collection', icon: '⭐', label: '新收藏' },
-    { action: 'home-add-location', icon: '📍', label: '记足迹' },
-    { action: 'home-today', icon: '📅', label: '今日日程' },
-    { action: 'home-mood', icon: '🎭', label: '心情' },
+    { action: 'home-calendar', icon: '📅', label: '日历视图' },
     { action: 'open-verifin', icon: '📊', label: '记账' },
     { action: 'nav', page: 'map', icon: '🗺️', label: '足迹地图' },
   ];
@@ -1067,14 +1067,23 @@ let bouncedTodoIds = new Set();
 let lastShownLevel = null;
 
 function renderTasks() {
+  // 偏好恢复：以 earth_ui_prefs 为准（其他入口改过也能同步）；读不到保持当前值
+  if (typeof uiPrefsLoad === 'function') {
+    try { taskHideDone = !!uiPrefsLoad().hideDoneTasks; } catch (e) { /* 保持默认 */ }
+  }
   const horizon = dayKeyAddDays(todayStr(), 7); // 今天起 7 天内（含已过期）视为「即将到期」
-  const roots = taskDueFilter
+  let roots = taskDueFilter
     ? getRootTasks().filter(function (t) {
         return t.category === 'todo' && t.status !== 'done' && t.dueDate && t.dueDate <= horizon;
       })
     : (taskFilter === 'all'
       ? getRootTasks()
       : getRootTasks().filter(function (t) { return t.category === taskFilter; }));
+  // v1.0.3 迭代 2：「隐藏已完成」——根级过滤已完成任务（子任务随树展示，不断裂）；
+  // 「即将到期」筛选本身就是只看未完成 To Do，无需叠加。
+  if (taskHideDone && !taskDueFilter) {
+    roots = roots.filter(function (t) { return t.status !== 'done'; });
+  }
   const taskTabHtml = [{ k: 'all', l: '全部' }, { k: 'main', l: '主线' }, { k: 'side', l: '支线' }, { k: 'todo', l: 'To Do' }]
     .map(function (t) {
       return '<button class="tab ' + (taskFilter === t.k ? 'active' : '') + '" data-action="task-filter" data-cat="' + t.k + '">' + t.l + '</button>';
@@ -1083,7 +1092,13 @@ function renderTasks() {
     '<section class="page">' +
       '<div class="page-head">' +
         '<h2 class="page-title">任务</h2>' +
-        '<button class="btn btn-primary" data-action="open-task-new">新增任务</button>' +
+        '<div class="form-inline">' +
+          // v1.0.3 迭代 2：日历视图直达（数据页的日历子视图）+ 隐藏已完成开关
+          '<button class="btn btn-ghost" data-action="goto-calendar">📅 日历视图</button>' +
+          '<button class="btn btn-ghost" data-action="task-hide-done">' +
+            (taskHideDone ? '👁 显示已完成' : '🙈 隐藏已完成') + '</button>' +
+          '<button class="btn btn-primary" data-action="open-task-new">新增任务</button>' +
+        '</div>' +
       '</div>' +
       '<div class="tabs">' + taskTabHtml + '</div>' +
       '<div class="legend">' +
@@ -1716,10 +1731,10 @@ function renderCalendarDetail() {
   );
 }
 
-/* ==================== v9：日历直接写 ToDo / 灵感 ==================== */
-
-/** 日历写入类型：idea → state.calendarNotes；todo → state.tasks（category=todo） */
-let calendarEntryType = 'idea';
+/* ==================== v1.0.3 迭代 2：日历改为纯展示 ====================
+ * 原	v9「点日期直接弹写入框（灵感 / ToDo）」整链路移除：
+ * 日历视图只负责展示（月历 + 选中日详情），写入一律去对应功能页（任务页 / 世界日志），
+ * 避免同一份数据出现两个写入口造成反馈歧义。 */
 
 /**
  * 日历宿主重绘。
@@ -1729,98 +1744,6 @@ let calendarEntryType = 'idea';
 function rerenderCalendarHost() {
   if (currentPage === 'data') refreshCurrentPage();
   else renderCalendar();
-}
-
-/**
- * 点击日期弹出的写入框：日期 + 多行文本 + 类型（灵感 / ToDo）+ 保存。
- *
- * 为什么点日期就直接弹窗：
- *   原先点日期只是「选中并刷新下方详情」，真要记录还得再去详情里找文本框，
- *   两步操作对「随手记」这种高频轻动作太重。
- *
- * 为什么用模态而不是内联文本框：
- *   内联文本框每次切月份 / 切日期都会随整块内容重渲染，输入到一半的光标会被冲掉；
- *   模态挂在 #modal-root，与内容区重渲互不影响，天然免疫这个问题。
- */
-function openCalendarEntryModal(dateStr) {
-  calendarEntryType = 'idea';
-  const existing = (state.calendarNotes && typeof state.calendarNotes[dateStr] === 'string')
-    ? state.calendarNotes[dateStr] : '';
-
-  openModal(
-    '<h3 class="modal-title">✍️ ' + escapeHtml(dateStr) + ' · 写点什么</h3>' +
-    '<div class="form-row"><label>类型</label>' +
-      '<div class="cat-chip-row">' +
-        '<button type="button" class="cat-chip active" data-action="calendar-entry-type" data-type="idea">📝 灵感</button>' +
-        '<button type="button" class="cat-chip" data-action="calendar-entry-type" data-type="todo">✅ ToDo</button>' +
-      '</div>' +
-    '</div>' +
-    '<div class="form-row"><label>内容</label>' +
-      '<textarea id="calEntryText" rows="4" maxlength="500" placeholder="记下此刻的想法…">' +
-        escapeHtml(existing) + '</textarea>' +
-    '</div>' +
-    '<div class="modal-actions">' +
-      '<button class="btn btn-ghost" id="calEntryCancel">取消</button>' +
-      '<button class="btn btn-primary" id="calEntrySave">保存</button>' +
-    '</div>'
-  );
-
-  const cancel = document.getElementById('calEntryCancel');
-  if (cancel) cancel.onclick = closeModal;
-  const save = document.getElementById('calEntrySave');
-  if (save) save.onclick = function () { handleCalendarEntrySave(dateStr); }
-
-  focusCalendarEntry();
-}
-
-/** 切换写入类型：同步高亮、占位文案，并把光标送回输入框 */
-function setCalendarEntryType(type) {
-  calendarEntryType = (type === 'todo') ? 'todo' : 'idea';
-  const chips = document.querySelectorAll('#modal-root .cat-chip');
-  Array.prototype.forEach.call(chips, function (c) {
-    c.classList.toggle('active', c.dataset.type === calendarEntryType);
-  });
-  const ta = document.getElementById('calEntryText');
-  if (ta) {
-    ta.placeholder = (calendarEntryType === 'todo')
-      ? '要做什么？保存后会作为 To Do 记到这一天'
-      : '记下此刻的想法…';
-  }
-  focusCalendarEntry();
-}
-
-/**
- * 把光标送进内容框。
- * 模态刚插入 DOM 时布局尚未稳定，部分 WebView 上立刻 focus() 会静默失败
- * （表现为「点输入框没光标、软键盘不弹」）。放到下一帧执行是最实际的一道保险。
- */
-function focusCalendarEntry() {
-  try {
-    const ta = document.getElementById('calEntryText');
-    if (!ta || typeof ta.focus !== 'function') return;
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(function () { ta.focus(); });
-    else setTimeout(function () { ta.focus(); }, 0);
-  } catch (e) { /* 聚焦失败也不该阻断：用户仍可手动点击输入 */ }
-}
-
-/** 保存日历写入：灵感写 calendarNotes（日历圆点据此点亮）；ToDo 建 todo 任务并挂到期日 */
-function handleCalendarEntrySave(dateStr) {
-  const el = document.getElementById('calEntryText');
-  const text = el ? String(el.value || '').trim() : '';
-  if (!text) { toast('内容不能为空'); focusCalendarEntry(); return; }
-
-  if (calendarEntryType === 'todo') {
-    createTask({ category: 'todo', title: text, dueDate: dateStr, status: 'planning' });
-    checkAutoAchievements();
-    toast('已加入 ' + dateStr + ' 的待办');
-  } else {
-    if (!state.calendarNotes) state.calendarNotes = {};
-    state.calendarNotes[dateStr] = text;
-    saveState();
-    toast('已保存 ' + dateStr + ' 的灵感');
-  }
-  closeModal();
-  rerenderCalendarHost();
 }
 
 /* ==================== v1.0.3 迭代：主页信息流显示设置 ==================== */
@@ -2278,18 +2201,13 @@ function renderSettings() {
         return '' +
         '<div class="card">' +
           '<div class="card-title">👤 个人资料</div>' +
-          '<div class="profile-summary-row">' +
-            '<span class="profile-summary-avatar">' +
-              (typeof buildAvatarInner === 'function' ? buildAvatarInner(p.avatarData, p.avatarKey) : '') +
-            '</span>' +
-            '<div>' +
-              '<div class="profile-user-name">' + (p.name ? escapeHtml(p.name) : '<span class="muted">未命名角色</span>') + '</div>' +
-              (p.country
-                ? '<div class="muted">区服：' + escapeHtml(p.country) + (p.province ? ' · ' + escapeHtml(p.province) : '') + '</div>'
-                : '<div class="muted">完善个人资料，让角色更有辨识度</div>') +
-              '<div class="muted">性别 / 生日 / 签名都在这里改（等级 = 年龄）</div>' +
-            '</div>' +
-          '</div>' +
+          // v1.0.3 迭代：入口卡不再展示头像（避免页面过长），仅保留文字信息；
+          // 头像查看与编辑收敛到「编辑个人资料」进入后的资料页。
+          '<div class="profile-user-name">' + (p.name ? escapeHtml(p.name) : '<span class="muted">未命名角色</span>') + '</div>' +
+          (p.country
+            ? '<div class="muted">区服：' + escapeHtml(p.country) + (p.province ? ' · ' + escapeHtml(p.province) : '') + '</div>'
+            : '<div class="muted">完善个人资料，让角色更有辨识度</div>') +
+          '<div class="muted">性别 / 生日 / 签名都在这里改（等级 = 年龄）</div>' +
           '<div class="form-inline">' +
             '<button class="btn btn-primary" data-action="goto-profile">✏️ 编辑个人资料</button>' +
           '</div>' +
@@ -2845,6 +2763,27 @@ function bindGlobalEvents() {
         taskDueFilter = false; // 切回普通分类即退出「即将到期」筛选
         renderTasks();
         break;
+      /* v1.0.3 迭代 2：任务页 → 日历视图直达（setDashboardView 由 stats.js 导出，不裸调） */
+      case 'goto-calendar':
+        navigate('data');
+        if (typeof setDashboardView === 'function') {
+          setDashboardView('calendar');
+          refreshCurrentPage();
+        }
+        break;
+      /* v1.0.3 迭代 2：隐藏/显示已完成任务开关（偏好写回 earth_ui_prefs） */
+      case 'task-hide-done': {
+        taskHideDone = !taskHideDone;
+        if (typeof uiPrefsLoad === 'function' && typeof uiPrefsSave === 'function') {
+          try {
+            const p = uiPrefsLoad();
+            p.hideDoneTasks = taskHideDone;
+            uiPrefsSave(p);
+          } catch (e) { /* 存储不可用时仅本次会话生效 */ }
+        }
+        renderTasks();
+        break;
+      }
       case 'due-tasks':
         taskDueFilter = true;
         navigate('tasks');
@@ -2946,18 +2885,13 @@ function bindGlobalEvents() {
         renderCalendar();
         break;
       case 'cal-select': {
-        // v9：点日期 = 选中 + 直接弹出写入框（灵感 / ToDo 二选一）
+        // v1.0.3 迭代 2：点日期 = 选中并刷新下方详情（纯展示）。
+        // 日历不再提供任何写入入口——任务去任务页记、灵感去主页世界日志记。
         calendarSelected = btn.dataset.date;
         rerenderCalendarHost();
-        openCalendarEntryModal(btn.dataset.date);
         break;
       }
-      /* v1.0.3 迭代：内联随手记的 save/clear 入口已随编辑块一并移除，handler 不再保留。
-         保存语义唯一化：写入只走 openCalendarEntryModal（成功 toast「已保存」），
-         不存在「点保存却提示已清除」的歧义路径。 */
-      case 'calendar-entry-type':
-        setCalendarEntryType(btn.dataset.type);
-        break;
+      /* v1.0.3 迭代 2：日历写入链路（calendar-entry-type / calEntry* 弹窗）已整体移除。 */
       case 'home-memo-voice':
         toggleVoiceInput();
         break;
@@ -2994,20 +2928,20 @@ function bindGlobalEvents() {
         navigate('backpack');
         openItemModal(null, '', null);
         break;
-      /* v1.0.3 迭代：新收藏 / 记足迹（替代与概览卡、底部 Tab 重复的「查看成就 / 系统」两格） */
+      /* v1.0.3 迭代：新收藏（替代与概览卡、底部 Tab 重复的「查看成就 / 系统」两格） */
       case 'home-add-collection':
         navigate('backpack');
         backpackTab = 'collection';
         renderBackpack();
         if (typeof openCollectionModal === 'function') openCollectionModal(null);
         break;
-      case 'home-add-location':
-        navigate('map');
-        // 跨文件调用走显式导出对象（不裸调）：map.js 已把 newLocation 挂到 E.map
-        if (typeof E !== 'undefined' && E.map && typeof E.map.newLocation === 'function') E.map.newLocation();
-        break;
-      case 'home-today':
-        openTodayModal();
+      /* v1.0.3 迭代 2：日历视图直达（数据页的日历子视图；setDashboardView 由 stats.js 导出） */
+      case 'home-calendar':
+        navigate('data');
+        if (typeof setDashboardView === 'function') {
+          setDashboardView('calendar');
+          refreshCurrentPage();
+        }
         break;
       case 'home-memo-add':
         saveHomeMemo(document.getElementById('homeMemoInput'));
@@ -3045,12 +2979,9 @@ function bindGlobalEvents() {
         openHomeFeedSettingsModal();
         break;
       }
-      /* ---------- v1.2.0：心情 / 表情包入口（快速入口第 5 格） ---------- */
+      /* ---------- v1.2.0：心情弹窗（入口已随快速入口去重移除，弹窗逻辑保留备用） ---------- */
       case 'close-modal':
         closeModal();
-        break;
-      case 'home-mood':
-        openMoodPickerModal();
         break;
       case 'mood-pick': {
         const moodKey = btn.dataset.mood || '';
@@ -3953,18 +3884,8 @@ function renderMapAuto() {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderCalendar === "undefined") globalThis.renderCalendar = renderCalendar; } catch (e) {}
   E.renderCalendarDetail = renderCalendarDetail;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderCalendarDetail === "undefined") globalThis.renderCalendarDetail = renderCalendarDetail; } catch (e) {}
-  E.calendarEntryType = calendarEntryType;
-  try { if (typeof globalThis !== "undefined" && typeof globalThis.calendarEntryType === "undefined") globalThis.calendarEntryType = calendarEntryType; } catch (e) {}
   E.rerenderCalendarHost = rerenderCalendarHost;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.rerenderCalendarHost === "undefined") globalThis.rerenderCalendarHost = rerenderCalendarHost; } catch (e) {}
-  E.openCalendarEntryModal = openCalendarEntryModal;
-  try { if (typeof globalThis !== "undefined" && typeof globalThis.openCalendarEntryModal === "undefined") globalThis.openCalendarEntryModal = openCalendarEntryModal; } catch (e) {}
-  E.setCalendarEntryType = setCalendarEntryType;
-  try { if (typeof globalThis !== "undefined" && typeof globalThis.setCalendarEntryType === "undefined") globalThis.setCalendarEntryType = setCalendarEntryType; } catch (e) {}
-  E.focusCalendarEntry = focusCalendarEntry;
-  try { if (typeof globalThis !== "undefined" && typeof globalThis.focusCalendarEntry === "undefined") globalThis.focusCalendarEntry = focusCalendarEntry; } catch (e) {}
-  E.handleCalendarEntrySave = handleCalendarEntrySave;
-  try { if (typeof globalThis !== "undefined" && typeof globalThis.handleCalendarEntrySave === "undefined") globalThis.handleCalendarEntrySave = handleCalendarEntrySave; } catch (e) {}
   E.renderAchievementCard = renderAchievementCard;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderAchievementCard === "undefined") globalThis.renderAchievementCard = renderAchievementCard; } catch (e) {}
   E.renderAchievements = renderAchievements;

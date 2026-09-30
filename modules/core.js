@@ -369,6 +369,7 @@ var UI_PREFS_DEFAULTS = {
   actTypes: { task: true, ach: true, item: true },    // 最近动态内容类型
   tlCount: 16,                                        // 人生时间轴条数 8 | 16 | 30
   tlTypes: { task: true, ach: true, loc: true },      // 时间轴事件类型
+  hideDoneTasks: false,                               // v1.0.3 迭代 2：任务页隐藏已完成
 };
 
 /** 读 UI 偏好：坏数据 / 缺字段一律逐项回落默认值，保证返回结构永远完整 */
@@ -394,6 +395,7 @@ function uiPrefsLoad() {
     ['task', 'ach', 'loc'].forEach(function (k) {
       if (obj.tlTypes && typeof obj.tlTypes[k] === 'boolean') merged.tlTypes[k] = obj.tlTypes[k];
     });
+    if (typeof obj.hideDoneTasks === 'boolean') merged.hideDoneTasks = obj.hideDoneTasks;
   } catch (e) { /* 解析失败回落默认 */ }
   return merged;
 }

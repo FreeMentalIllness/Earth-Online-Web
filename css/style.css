@@ -1075,7 +1075,7 @@ html.is-scrolling .more-panel {
    v1.2.0：固定 4 列 —— 8 个入口正好排成两行四列。
    之前用 auto-fill 会随视口宽度变成 3/5/6 列，底部总留半行空格。 */
 .quick-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-gap);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-gap);
   margin-bottom: var(--space-gap);
 }
 .quick-tile {
