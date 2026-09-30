@@ -3761,6 +3761,10 @@ function renderMapAuto() {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.fmtDateTime === "undefined") globalThis.fmtDateTime = fmtDateTime; } catch (e) {}
   E.toast = toast;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.toast === "undefined") globalThis.toast = toast; } catch (e) {}
+  // v1.0.3 回归修复：头像裁剪（profile.js 独立模块）需跨文件调用裁剪模态，
+  // 必须显式导出，否则头像上传永远走兜底分支、打不开裁剪框（壁纸裁剪因同文件调用而正常）。
+  E.openImageCropModal = openImageCropModal;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.openImageCropModal === "undefined") globalThis.openImageCropModal = openImageCropModal; } catch (e) {}
   E.__achNotifyQueue = __achNotifyQueue;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.__achNotifyQueue === "undefined") globalThis.__achNotifyQueue = __achNotifyQueue; } catch (e) {}
   E.__achNotifyShowing = __achNotifyShowing;
