@@ -137,8 +137,8 @@ function isValidGender(v) {
 const APP_INFO = {
   name: '地球Online',
   enName: 'Earth Online',
-  version: '1.0.3',
-  buildDate: '2026-09-29',
+  version: '1.0.4',
+  buildDate: '2026-09-30',
   license: 'MIT',
   // 职责分工：二十七 负责数据，Cyou2 负责设计。
   developers: [
@@ -217,6 +217,18 @@ const PRIVACY_POLICY = [
  * 0.9.x 预览版，历史保留但不占正式版本号。
  */
 const CHANGELOG = [
+  {
+    version: '1.0.4',
+    date: '2026-09-30',
+    items: [
+      '收藏卡与物品卡同构：收藏夹条目复用物品卡样式与操作，视觉交互一致',
+      '空状态统一为大引导卡（插画 + 说明 + 直达按钮），任务/背包/收藏口径一致',
+      '隐私政策与更新说明弹窗加宽，去除横向滚动',
+      '数据页视图切换升级为分段 Tab，切换后保持滚动位置',
+      '地图增量刷新增加异常兜底，保存坐标更稳',
+      '深色模式配色与 Android / Windows 三端统一，实心琥珀按钮文字对比度达 WCAG AA',
+    ],
+  },
   {
     version: '1.0.3',
     date: '2026-09-29',
