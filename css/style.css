@@ -2597,3 +2597,36 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 @media (max-width: 600px) {
   .cal-detail-grid { grid-template-columns: 1fr; gap: 14px; }
 }
+
+/* v1.0.4：PWA 新版本就绪提示横幅（由 app.js 动态创建，穿透旧缓存后提示刷新） */
+#updateBar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px;
+  background: #d4a373;
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#updateBar .ub-btn {
+  flex: none;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  background: #fff;
+  color: #b9824a;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+#updateBar:hover { filter: brightness(1.03); }

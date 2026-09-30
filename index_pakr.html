@@ -1360,6 +1360,26 @@ html.is-scrolling .more-panel {
 }
 
 /* =========================================================
+   v1.0.5：设置页危险区（清空数据）
+   红色边框强调 + 模态内警示文字与勾选框；深色模式随 --sem-red 变量自动适配。
+   ========================================================= */
+.danger-zone {
+  border: 1px solid rgba(184, 80, 63, 0.45);
+  background: rgba(184, 80, 63, 0.04);
+}
+.danger-zone .card-title { color: var(--sem-red); }
+.reset-warn-text { color: var(--sem-red); }
+.modal-check {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: var(--font-body); line-height: 1.6;
+  color: var(--text); cursor: pointer;
+  margin-bottom: 16px; user-select: none;
+}
+.modal-check input[type="checkbox"] {
+  width: 16px; height: 16px; margin-top: 3px; accent-color: var(--sem-red); cursor: pointer;
+}
+
+/* =========================================================
    v4 PART2：数据看板
    卡片全部实色 --panel + 1px 边框，零毛玻璃新增面；
    入场动画 fill-mode 必须是 backwards（both 会形成 backdrop root
@@ -2588,6 +2608,39 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 @media (max-width: 600px) {
   .cal-detail-grid { grid-template-columns: 1fr; gap: 14px; }
 }
+
+/* v1.0.4：PWA 新版本就绪提示横幅（由 app.js 动态创建，穿透旧缓存后提示刷新） */
+#updateBar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px;
+  background: #d4a373;
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#updateBar .ub-btn {
+  flex: none;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  background: #fff;
+  color: #b9824a;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+#updateBar:hover { filter: brightness(1.03); }
 
 </style>
 <script>window._AMapSecurityConfig = { securityJsCode: "d4e92781da1ca5996c246d315af66031" };</script>
@@ -5514,12 +5567,58 @@ var backpackTab = 'all';
     } catch (e) {/* 忽略 */}
   }
 
-  /** 清空「当前账号」的存档并恢复种子数据（不影响其他账号） */
+  /**
+   * 清空全部用户数据并恢复种子数据（v1.0.5「清空数据」统一语义）。
+   *
+   * 清空范围：
+   *   - 主存档 earth_data（任务/日志/物品/成就/收藏/足迹/资料/日历随手记等全部用户数据）；
+   *   - 用户数据附加键：成就备份、导入前快照、本地自动备份系列、v19 之前的旧账号残留键。
+   * 保留范围（应用设置，绝不误删）：
+   *   - state.aiConfig（AI 助手配置）→ 回填到新种子；
+   *   - earth_theme / earth_wallpaper / wallpaper_blob / earth_font_scale / earth_ui_prefs
+   *     （主题、壁纸、字号、主页信息流偏好）；
+   *   - earth_online_webdav_v1（WebDAV 配置）、earth_notify / earth_ach_sound（提醒与音效开关）、
+   *     earth_online_pwa_tip_v1、earth_migrated（迁移标记，清了会触发重复迁移）。
+   * 调用方（pages.js 的清空确认模态）负责：置防拉回标记、可选删云端、刷新页面。
+   */
   function resetAllData() {
+    // 1. 抢救 AI 配置（深拷贝，避免引用悬挂）
+    var keepAi = null;
+    try {
+      if (state && state.aiConfig && _typeof(state.aiConfig) === 'object') {
+        keepAi = JSON.parse(JSON.stringify(state.aiConfig));
+      }
+    } catch (e) {
+      keepAi = null;
+    }
+
+    // 2. 清主存档
     try {
       EOStore.remove(currentStorageKey());
     } catch (e) {/* 忽略 */}
-    location.reload();
+
+    // 3. 清用户数据附加键（键名用 STORAGE_PREFIX 拼接，勿引用 backup.js 常量 —— 加载顺序在先）
+    try {
+      var achBakKey = STORAGE_PREFIX + 'achievements_backup_v1';
+      var autobakIdxKey = STORAGE_PREFIX + 'autobackup_index';
+      var autobakPrefix = STORAGE_PREFIX + 'autobackup_';
+      var allKeys = EOStore.keys();
+      for (var i = 0; i < allKeys.length; i++) {
+        var k = allKeys[i];
+        if (k === achBakKey || k === autobakIdxKey || k.indexOf(autobakPrefix) === 0 || k.indexOf('earth_data_') === 0) {
+          try {
+            EOStore.remove(k);
+          } catch (e) {/* 单键失败跳过 */}
+        }
+      }
+    } catch (e) {/* 枚举失败不阻断主流程 */}
+
+    // 4. 重建种子并回填 AI 配置（同步落盘，reload 后 loadState 直读新种子）
+    state = defaultState();
+    if (keepAi) state.aiConfig = keepAi;
+    try {
+      EOStore.set(currentStorageKey(), state);
+    } catch (e) {/* 忽略 */}
   }
 
   /**
@@ -10402,6 +10501,12 @@ var backpackTab = 'all';
   var WEBDAV_DEFAULT_SCHEME = ['https', '://'].join('');
   /** 密码密文前缀（用于区分「已编码」与「历史明文」，实现向后兼容） */
   var WEBDAV_SECRET_PREFIX = 'wd1:';
+  /**
+   * 防同步拉回标记（清空数据专用）：置位后下一次冷启动自动拉取会被跳过（消费一次即失效）。
+   * 场景：用户清空本地数据后，若云端还留着旧备份，启动拉取会把旧数据整包拉回来，
+   * 「清空」就形同虚设。此标记与 EOStore 双写（见 markSkipNextPull 注释）。
+   */
+  var WEBDAV_SKIP_PULL_KEY = STORAGE_PREFIX + 'skip_next_pull';
 
   /* ==================== 纯函数（无副作用，QA 可直测） ==================== */
 
@@ -10909,6 +11014,113 @@ var backpackTab = 'all';
   }
 
   /**
+   * 置位「下次启动跳过自动拉取」标记。
+   * 存取必须同通道：EOStore 无 setSync（getSync 读 IndexedDB 内存镜像，
+   * 直接写 localStorage 的值 getSync 读不到），故这里 set + localStorage 双写；
+   * 读取侧 getSync + localStorage 兜底（见 consumeSkipNextPull）。
+   */
+  function markSkipNextPull() {
+    try {
+      if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.set === 'function') {
+        EOStore.set(WEBDAV_SKIP_PULL_KEY, true);
+      }
+    } catch (e) {/* 忽略 */}
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage) {
+        localStorage.setItem(WEBDAV_SKIP_PULL_KEY, '1');
+      }
+    } catch (e) {/* 忽略 */}
+  }
+
+  /**
+   * 读取并消费「跳过一次自动拉取」标记（读后即清，只拦截下一次）。
+   * @returns {boolean} true 表示本次应跳过冷启动拉取
+   */
+  function consumeSkipNextPull() {
+    var hit = false;
+    try {
+      if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.getSync === 'function') {
+        hit = EOStore.getSync(WEBDAV_SKIP_PULL_KEY) === true;
+      }
+    } catch (e) {/* 忽略 */}
+    try {
+      if (!hit && typeof localStorage !== 'undefined' && localStorage) {
+        hit = localStorage.getItem(WEBDAV_SKIP_PULL_KEY) === '1';
+      }
+    } catch (e) {/* 忽略 */}
+    // 无论读到与否都清一次，保证「只拦一次」语义
+    try {
+      if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.remove === 'function') {
+        EOStore.remove(WEBDAV_SKIP_PULL_KEY);
+      }
+    } catch (e) {/* 忽略 */}
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage) {
+        localStorage.removeItem(WEBDAV_SKIP_PULL_KEY);
+      }
+    } catch (e) {/* 忽略 */}
+    return hit;
+  }
+
+  /**
+   * 删除云端备份文件（HTTP DELETE）。
+   * - 404 视为成功（云端本来就没有备份，语义上目标已达成）；
+   * - 2xx 视为成功；其余状态码 / 网络失败返回失败原因（调用方决定是否提示）。
+   * @param {Object} cfg 可选；缺省时读当前已保存配置
+   * @returns {Promise<{ok: boolean, status: number, error: string}>}
+   */
+  function webdavDeleteRemote(cfg) {
+    return new Promise(function (resolve) {
+      try {
+        var c = cfg || loadWebdavConfig();
+        var v = validateWebdavConfig(c);
+        if (!v.ok) {
+          resolve({
+            ok: false,
+            status: 0,
+            error: '尚未配置 WebDAV，云端无备份可删'
+          });
+          return;
+        }
+        var url = buildWebdavFileUrl(c);
+        var auth = webdavBasicAuth(c.user, decodeWebdavSecret(c.pass));
+        webdavFetch(url, {
+          method: 'DELETE',
+          headers: {
+            Authorization: auth
+          }
+        }).then(function (res) {
+          if (res.status === 404 || res.ok) {
+            resolve({
+              ok: true,
+              status: res.status,
+              error: ''
+            });
+          } else {
+            resolve({
+              ok: false,
+              status: res.status,
+              error: describeWebdavError(null, res.status)
+            });
+          }
+        }).catch(function (err) {
+          resolve({
+            ok: false,
+            status: 0,
+            error: describeWebdavError(err, 0)
+          });
+        });
+      } catch (e) {
+        resolve({
+          ok: false,
+          status: 0,
+          error: '删除请求发起失败'
+        });
+      }
+    });
+  }
+
+  /**
    * 自动同步：下载云端 → 按修改时间（exportedAt）判定冲突 → 云端更新才处理。
    *
    * - announce=true（冷启动）：直接应用云端数据并刷新，等价于「启动时拉取」；
@@ -10918,6 +11130,9 @@ var backpackTab = 'all';
    */
   function runWebdavAutoSyncCheck(announce) {
     try {
+      // 清空数据防拉回：冷启动（announce=true）先消费跳过标记，命中则本次不拉取。
+      // 轮询（announce=false）只提示不覆盖数据，不算「拉回」，无需拦截。
+      if (announce && consumeSkipNextPull()) return;
       var cfg = loadWebdavConfig();
       if (!cfg.autoSync) return;
       var v = validateWebdavConfig(cfg);
@@ -11202,6 +11417,22 @@ var backpackTab = 'all';
   E.runWebdavAutoSyncCheck = runWebdavAutoSyncCheck;
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.runWebdavAutoSyncCheck === "undefined") globalThis.runWebdavAutoSyncCheck = runWebdavAutoSyncCheck;
+  } catch (e) {}
+  E.WEBDAV_SKIP_PULL_KEY = WEBDAV_SKIP_PULL_KEY;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.WEBDAV_SKIP_PULL_KEY === "undefined") globalThis.WEBDAV_SKIP_PULL_KEY = WEBDAV_SKIP_PULL_KEY;
+  } catch (e) {}
+  E.markSkipNextPull = markSkipNextPull;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.markSkipNextPull === "undefined") globalThis.markSkipNextPull = markSkipNextPull;
+  } catch (e) {}
+  E.consumeSkipNextPull = consumeSkipNextPull;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.consumeSkipNextPull === "undefined") globalThis.consumeSkipNextPull = consumeSkipNextPull;
+  } catch (e) {}
+  E.webdavDeleteRemote = webdavDeleteRemote;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.webdavDeleteRemote === "undefined") globalThis.webdavDeleteRemote = webdavDeleteRemote;
   } catch (e) {}
   E.initWebdavAutoSync = initWebdavAutoSync;
   try {
@@ -14252,7 +14483,9 @@ var backpackTab = 'all';
     // v5：成就备份恢复入口（成就页「重置全部成就」会自动留存备份，在这里找回）
     '<div class="card">' + '<div class="card-title">🗂️ 成就备份</div>' + achBackupCardHtml() + '</div>' +
     // v1.2.1：隐私政策入口
-    '<div class="card">' + '<div class="card-title">🔏 隐私政策</div>' + '<p class="muted">本应用不收集任何数据，所有内容只保存在这台设备上。' + '完整说明（联网时机、权限用途、数据删除）可随时查阅。</p>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="privacy-policy">📄 查看隐私政策</button>' + '</div>' + '</div>' + '<div class="card">' + '<div class="card-title">🗃️ 本地存档</div>' + '<p class="muted">所有数据仅保存在本浏览器中（键名前缀 ' + STORAGE_PREFIX + '），不会上传到任何服务器。</p>' + '<div class="form-inline">' + '<button class="btn btn-danger" data-action="reset-data">清空并重置为种子数据</button>' + '</div>' + '</div>' + /* ==================== ④ 关于 ==================== */
+    '<div class="card">' + '<div class="card-title">🔏 隐私政策</div>' + '<p class="muted">本应用不收集任何数据，所有内容只保存在这台设备上。' + '完整说明（联网时机、权限用途、数据删除）可随时查阅。</p>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="privacy-policy">📄 查看隐私政策</button>' + '</div>' + '</div>' +
+    // v1.0.5：危险区 —— 清空数据（醒目确认 + 可选删云端 + 防同步拉回）
+    '<div class="card danger-zone">' + '<div class="card-title">⚠️ 危险区</div>' + '<p class="muted">清空本机全部用户数据（任务、日志、物品、成就、收藏、足迹、个人资料等），' + '并恢复为全新种子数据。<b>清空后无法撤销</b>，建议先「导出备份」。' + '主题、壁纸、WebDAV 与 AI 配置等应用设置会保留；清空后会暂停一次启动时的云端自动拉取，' + '防止旧备份被同步回来。</p>' + '<div class="form-inline">' + '<button class="btn btn-danger" data-action="reset-data">🗑️ 清空数据</button>' + '<button class="btn btn-ghost" data-action="reset-resync">☁️ 重新同步（上传当前数据到云端）</button>' + '</div>' + '<p class="backup-note">「重新同步」会把当前（清空后的）数据上传云端覆盖旧备份，用于恢复多设备同步。</p>' + '</div>' + /* ==================== ④ 关于 ==================== */
     groupDivider() + groupTitle('ℹ️', '关于', '版本 · 团队 · 赞助') + aboutCard() + '</section>';
   }
 
@@ -14274,6 +14507,61 @@ var backpackTab = 'all';
     checkAutoAchievements();
     toast('出生日期已更新，等级重新计算');
     return true;
+  }
+
+  /* ==================== v1.0.5：清空数据 —— 醒目二次确认模态 ==================== */
+
+  /**
+   * 「清空数据」确认模态：红色警示 + 可选勾选「同时删除云端备份」（默认不勾）。
+   * 确认流程：置防拉回标记 →（勾选时）删云端备份 → 本地清空 resetAllData → 刷新回主页。
+   * 删除云端失败不阻断本地清空（会明确提示）。
+   */
+  function openResetDataConfirm() {
+    var hasCfg = typeof loadWebdavConfig === 'function' ? function () {
+      var c = loadWebdavConfig();
+      return !!(c && (c.url || c.user || c.pass));
+    }() : false;
+    openModal('<h3 class="modal-title">⚠️ 确认清空数据</h3>' + '<p class="modal-text reset-warn-text">此操作将<b>清空本机全部用户数据</b>' + '（任务、日志、物品、成就、收藏、足迹、个人资料、日历随手记等），' + '并恢复为全新种子数据。<b>清空后无法撤销</b>。</p>' + '<p class="modal-text">主题、壁纸、WebDAV 与 AI 配置等应用设置会保留。' + (hasCfg ? '云端备份默认保留，清空后暂停一次自动拉取。' : '当前未配置 WebDAV，仅清空本地数据。') + '</p>' + (hasCfg ? '<label class="modal-check"><input type="checkbox" id="resetCloudDel">' + '同时删除云端备份（WebDAV 服务器上的存档文件）</label>' : '') + '<div class="modal-actions modal-actions-equal">' + '<button class="btn btn-ghost" id="resetDataCancel">取消</button>' + '<button class="btn btn-danger" id="resetDataConfirm">确认清空</button>' + '</div>');
+    var cancel = document.getElementById('resetDataCancel');
+    if (cancel) cancel.onclick = closeModal;
+    var confirmBtn = document.getElementById('resetDataConfirm');
+    if (confirmBtn) confirmBtn.onclick = function () {
+      var delCloud = !!(document.getElementById('resetCloudDel') && document.getElementById('resetCloudDel').checked);
+      // 1. 无论是否删云端，都先置防拉回标记（本地清空后绝不能让旧备份拉回来）
+      if (typeof markSkipNextPull === 'function') markSkipNextPull();
+      // 2. 勾选了删云端 → 等 DELETE 结束再清本地（成败都继续，失败明确提示）
+      if (delCloud && typeof webdavDeleteRemote === 'function') {
+        confirmBtn.disabled = true;
+        if (cancel) cancel.disabled = true;
+        webdavDeleteRemote().then(function (res) {
+          if (res && res.ok) {
+            toast('云端备份已删除');
+          } else {
+            toast(res && res.error ? '云端删除失败：' + res.error : '云端删除失败，仅清空本地数据');
+          }
+          finishReset();
+        });
+      } else {
+        finishReset();
+      }
+    };
+    function finishReset() {
+      closeModal();
+      try {
+        resetAllData();
+      } catch (e) {
+        toast('清空失败，数据未改动');
+        return;
+      }
+      toast('已清空全部用户数据');
+      if (typeof setTimeout === 'function') {
+        setTimeout(function () {
+          try {
+            location.reload();
+          } catch (e) {/* 测试环境忽略 */}
+        }, 400);
+      }
+    }
   }
 
   /* ==================== 灵感闪念 ==================== */
@@ -15140,9 +15428,16 @@ var backpackTab = 'all';
           renderAchievements();
           break;
         case 'reset-data':
-          openConfirm('将清空所有本地数据并恢复为种子数据，确定吗？', function () {
-            resetAllData();
-          });
+          openResetDataConfirm();
+          break;
+        case 'reset-resync':
+          // 清空后的「重新同步」：把当前（清空后的）数据上传云端覆盖旧备份，恢复多设备同步。
+          // 复用 webdavUploadBackup：读取设置页表单 + 校验 + PUT，btn=null 时加载态自动跳过。
+          if (typeof webdavUploadBackup === 'function') {
+            openConfirm('将把当前数据上传到云端覆盖旧备份（多设备将以此为准），确定继续吗？', function () {
+              webdavUploadBackup(null);
+            });
+          }
           break;
 
         /* ---------- v8：AI 助手（配置 / 发送 / 清空对话） ---------- */
@@ -16147,6 +16442,10 @@ var backpackTab = 'all';
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.renderMapAuto === "undefined") globalThis.renderMapAuto = renderMapAuto;
   } catch (e) {}
+  E.openResetDataConfirm = openResetDataConfirm;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.openResetDataConfirm === "undefined") globalThis.openResetDataConfirm = openResetDataConfirm;
+  } catch (e) {}
 })();
 /* ===== modules/app.js ===== */
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
@@ -16696,9 +16995,81 @@ var backpackTab = 'all';
   /** 注册 sw.js；注册失败一律静默（离线运行是增强项，失败不应打扰用户） */
   function registerServiceWorker() {
     try {
-      var p = navigator.serviceWorker.register('sw.js');
-      if (p && typeof p.catch === 'function') p.catch(function () {/* 静默 */});
+      // updateViaCache:'none' 让浏览器每次都向服务器复核 sw.js，避免 sw 自身被 HTTP 缓存而迟迟不更新
+      var reg = navigator.serviceWorker.register('sw.js', {
+        updateViaCache: 'none'
+      });
+      if (reg && typeof reg.then === 'function') {
+        reg.then(function (registration) {
+          wireUpdatePrompt(registration);
+        }).catch(function () {/* 静默 */});
+      }
+      if (reg && typeof reg.catch === 'function') reg.catch(function () {/* 静默 */});
     } catch (e) {/* 静默：file:// 等受限环境 */}
+  }
+
+  /**
+   * 更新提示接线：
+   * - 若已有等待激活的新 SW（未启用 skipWaiting 时），通知其立即接管；
+   * - 监听 updatefound：新 SW 装好且当前仍有旧控制者 → 弹「新版本已就绪」；
+   * - 监听 controllerchange：控制者切换（新 SW 接管）时弹提示。
+   * 首次注册导致的「从无控制者到被接管」不算更新，用 firstClaimHandled 过滤，避免误弹。
+   */
+  function wireUpdatePrompt(reg) {
+    try {
+      if (reg.waiting) reg.waiting.postMessage({
+        type: 'SKIP_WAITING'
+      });
+      if (reg.addEventListener) {
+        reg.addEventListener('updatefound', function () {
+          var nw = reg.installing;
+          if (!nw || !nw.addEventListener) return;
+          nw.addEventListener('statechange', function () {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateReady();
+            }
+          });
+        });
+      }
+      if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
+        var firstClaimHandled = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (!firstClaimHandled) {
+            firstClaimHandled = true;
+            return;
+          } // 首次接管（初始注册）不提示
+          showUpdateReady();
+        });
+      }
+    } catch (e) {/* 任何异常都不应阻断主流程 */}
+  }
+
+  /**
+   * 展示「新版本已就绪」横幅：点击立即刷新加载新资源；
+   * 同时 8 秒后自动刷新（满足「提示刷新 / 自动刷新」二选一），确保用户最终拿到最新版。
+   * 横幅重复调用只保留一个实例。
+   */
+  function showUpdateReady() {
+    try {
+      var bar = document.getElementById('updateBar');
+      if (bar) return; // 已存在，避免重复
+      bar = document.createElement('div');
+      bar.id = 'updateBar';
+      bar.setAttribute('role', 'button');
+      bar.innerHTML = '<span>🎉 新版本已就绪，点击刷新</span>' + '<button type="button" class="ub-btn">立即刷新</button>';
+      (document.body || document.documentElement).appendChild(bar);
+      var done = false;
+      function doReload() {
+        if (done) return;
+        done = true;
+        try {
+          if (typeof location !== 'undefined' && location.reload) location.reload();
+        } catch (e) {}
+      }
+      bar.addEventListener('click', doReload);
+      // 自动刷新兜底：8 秒后若用户未点，也强制重载新资源
+      if (typeof setTimeout === 'function') setTimeout(doReload, 8000);
+    } catch (e) {/* 横幅创建失败不阻断 */}
   }
 
   /** 是否已以独立窗口（添加到主屏幕后）运行 */

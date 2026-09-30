@@ -449,9 +449,74 @@ function initPWA() {
 /** 注册 sw.js；注册失败一律静默（离线运行是增强项，失败不应打扰用户） */
 function registerServiceWorker() {
   try {
-    const p = navigator.serviceWorker.register('sw.js');
-    if (p && typeof p.catch === 'function') p.catch(function () { /* 静默 */ });
+    // 控制者切换监听必须在 register 之前挂上，否则首次接管事件可能在注册回调前就已错过。
+    // 判定规则：页面加载时就没有控制者（首次访问）→ 随后第一次切换是初始接管，不算更新；
+    //           页面加载时已有控制者（老用户）→ 任何切换都是新 SW 接管，提示刷新。
+    if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
+      let initialClaimPending = !navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (initialClaimPending) { initialClaimPending = false; return; }
+        showUpdateReady();
+      });
+    }
+    // updateViaCache:'none' 让浏览器每次都向服务器复核 sw.js，避免 sw 自身被 HTTP 缓存而迟迟不更新
+    const reg = navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    if (reg && typeof reg.then === 'function') {
+      reg.then(function (registration) { wireUpdatePrompt(registration); }).catch(function () { /* 静默 */ });
+    }
+    if (reg && typeof reg.catch === 'function') reg.catch(function () { /* 静默 */ });
   } catch (e) { /* 静默：file:// 等受限环境 */ }
+}
+
+/**
+ * 更新提示接线（控制者切换监听在 registerServiceWorker 中已提前挂好）：
+ * - 若已有等待激活的新 SW（未启用 skipWaiting 时），通知其立即接管；
+ * - 监听 updatefound：新 SW 装好且当前仍有旧控制者 → 弹「新版本已就绪」。
+ */
+function wireUpdatePrompt(reg) {
+  try {
+    if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+    if (reg.addEventListener) {
+      reg.addEventListener('updatefound', function () {
+        const nw = reg.installing;
+        if (!nw || !nw.addEventListener) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateReady();
+          }
+        });
+      });
+    }
+  } catch (e) { /* 任何异常都不应阻断主流程 */ }
+}
+
+/**
+ * 展示「新版本已就绪」横幅：点击立即刷新加载新资源；
+ * 同时 8 秒后自动刷新（满足「提示刷新 / 自动刷新」二选一），确保用户最终拿到最新版。
+ * 横幅重复调用只保留一个实例。
+ */
+function showUpdateReady() {
+  try {
+    let bar = document.getElementById('updateBar');
+    if (bar) return; // 已存在，避免重复
+    bar = document.createElement('div');
+    bar.id = 'updateBar';
+    bar.setAttribute('role', 'button');
+    bar.innerHTML = '<span>🎉 新版本已就绪，点击刷新</span>' +
+      '<button type="button" class="ub-btn">立即刷新</button>';
+    (document.body || document.documentElement).appendChild(bar);
+
+    let done = false;
+    function doReload() {
+      if (done) return;
+      done = true;
+      try { if (typeof location !== 'undefined' && location.reload) location.reload(); } catch (e) {}
+    }
+    bar.addEventListener('click', doReload);
+    // 自动刷新兜底：8 秒后若用户未点，也强制重载新资源
+    if (typeof setTimeout === 'function') setTimeout(doReload, 8000);
+  } catch (e) { /* 横幅创建失败不阻断 */ }
 }
 
 /** 是否已以独立窗口（添加到主屏幕后）运行 */
