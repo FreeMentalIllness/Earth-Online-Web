@@ -546,7 +546,16 @@ html.is-scrolling .more-panel {
 
 .item-grid, .collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .item-card { padding: 14px 16px; }
-.collection-card { overflow: hidden; cursor: pointer; position: relative; }
+/* v1.0.3 迭代 3：收藏卡与物品卡同构 —— 同 padding；封面满宽出血（抵消卡片 padding）；
+   旧 collection-body/title/foot 结构已由 item-head/item-name/item-desc/item-date 取代。 */
+.collection-card { padding: 14px 16px; overflow: hidden; position: relative; cursor: pointer; }
+.collection-card .collection-cover {
+  width: calc(100% + 32px); max-width: none;
+  margin: -14px -16px 12px;
+  border-radius: 0;
+}
+.collection-card .item-head { margin-bottom: 8px; }
+.collection-card .collection-cover ~ .item-head { margin-top: 0; }
 .item-card:hover, .collection-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--amber); }
 
 /* 开关按钮：胶囊形，开态用主题主色，附「开 / 关」文字提示 */
@@ -2258,15 +2267,20 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 }
 .search-kind { font-size: var(--font-caption); color: var(--caption); flex: none; }
 
-/* ---- 21. 隐私政策弹窗 ---- */
-.modal-wide { max-width: 640px; width: 92vw; }
+/* ---- 21. 隐私政策 / 更新说明弹窗 ----
+   v1.0.3 迭代 3：面板调大（640→760px、可视高 52→62vh）；横向滑动移除——
+   外层 .modal-wide 裁掉横向溢出，内层 .privacy-body 只保留纵向滚动，
+   长行文本用 overflow-wrap 断行，不再出现左右拖动。 */
+.modal-wide { max-width: 760px; width: 92vw; overflow-x: hidden; }
 .privacy-body {
-  max-height: 52vh; overflow-y: auto;
+  max-height: 62vh; overflow-y: auto; overflow-x: hidden;
+  min-width: 0;
   display: flex; flex-direction: column; gap: 14px;
   padding: 4px 2px;
 }
+.privacy-sec { min-width: 0; }
 .privacy-sec-title { font-weight: 700; font-size: var(--font-body); margin-bottom: 4px; }
-.privacy-sec-body { font-size: var(--font-caption); color: var(--muted); line-height: 1.7; }
+.privacy-sec-body { font-size: var(--font-caption); color: var(--muted); line-height: 1.7; overflow-wrap: anywhere; }
 
 /* ==================== 体检 · 设置页 UI 尺寸统一 ==================== */
 
@@ -9031,12 +9045,22 @@ var backpackTab = 'all';
     }) : all.filter(function (c) {
       return c.category === collectionCatFilter;
     });
+
+    // v1.0.3 迭代 3：空状态统一走 emptyStateHtml（与物品 Tab 完全同款大引导卡）。
+    // 注意跨文件通道：emptyStateHtml 定义在 pages.js（闭包私有），必须经导出对象 E 调用，
+    // 直接 typeof 裸调在闭包内恒为 undefined（这正是此前收藏夹空状态退化成细提示条的原因）。
+    function _empty(emoji, title, msg, btn) {
+      if (typeof E !== 'undefined' && E && typeof E.emptyStateHtml === 'function') {
+        return E.emptyStateHtml(emoji, title, msg, btn);
+      }
+      return '<div class="card empty">' + emoji + ' ' + escapeHtml(title) + '，' + btn + '</div>';
+    }
     var bodyHtml = getCollectionCategoryList().length === 0
     // v1.0.3 迭代：无分类但有收藏时直接平铺展示全部收藏（此前被空状态盖住，收藏条目直接消失），
     // 顶部只放一条轻提示引导建分类 —— 引导与数据可见性两不误。
-    ? all.length ? '<div class="card empty category-empty">🏷️ 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点此创建分类</button>归置更清爽；以下是全部收藏：</div>' + '<div class="collection-grid bp-grid">' + all.map(renderCollectionCard).join('') + '</div>' : typeof emptyStateHtml === 'function' ? emptyStateHtml('🏷️', '还没有收藏分类', '收藏夹按分类归置更清爽：书籍、影视、文章、灵感……先建一个分类，再把想留住的收进来。', '<button class="btn btn-primary" data-action="collection-manage-categories">创建分类</button>') : '<div class="card empty category-empty">📭 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点击管理分类</button>创建第一个吧~</div>' : filtered.length ? '<div class="collection-grid bp-grid">' + filtered.map(renderCollectionCard).join('') + '</div>'
+    ? all.length ? '<div class="card empty category-empty">🏷️ 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点此创建分类</button>归置更清爽；以下是全部收藏：</div>' + '<div class="collection-grid bp-grid">' + all.map(renderCollectionCard).join('') + '</div>' : _empty('🏷️', '还没有收藏分类', '收藏夹按分类归置更清爽：书籍、影视、文章、灵感……先建一个分类，再把想留住的收进来。', '<button class="btn btn-primary" data-action="collection-manage-categories">创建分类</button>') : filtered.length ? '<div class="collection-grid bp-grid">' + filtered.map(renderCollectionCard).join('') + '</div>'
     // v1.2.1：空状态引导（emoji 插画 + 说明 + 直达按钮）
-    : all.length ? '<div class="card empty">🔍 该分类下暂无收藏，换个分类看看~</div>' : typeof emptyStateHtml === 'function' ? emptyStateHtml('📚', '收藏夹空着呢', '值得回看的东西都往这儿放：一篇好文章、一段聊天记录、一张截图，还能附上原文件。', '<button class="btn btn-primary" data-action="collection-new">+ 添加第一条收藏</button>') : '<div class="card empty">📭 还没有收藏，点击右上角「+ 新收藏」收藏第一件宝贝~</div>';
+    : all.length ? '<div class="card empty">🔍 该分类下暂无收藏，换个分类看看~</div>' : _empty('📚', '收藏夹空着呢', '值得回看的东西都往这儿放：一篇好文章、一段聊天记录、一张截图，还能附上原文件。', '<button class="btn btn-primary" data-action="collection-new">+ 添加第一条收藏</button>');
     return bodyHtml;
   }
 
@@ -9046,16 +9070,18 @@ var backpackTab = 'all';
     return '<span class="badge collection-cat-badge">' + (cat ? escapeHtml(cat) : '未分类') + '</span>';
   }
 
-  /** 收藏卡片：图片类以 blob 缩略图为封面；fileMeta 在而二进制不在 → 「需重新关联」角标 */
+  /** 收藏卡片：图片类以 blob 缩略图为封面；fileMeta 在而二进制不在 → 「需重新关联」角标
+   *  v1.0.3 迭代 3：骨架与物品卡（renderItemCard）完全同构 —— 顶部徽章+编辑/删除行、
+   *  标题、备注、附件行、时间行，同类名同对齐；封面图仅在有图片附件时保留为顶部横幅，
+   *  不再有 icon 大色块与底部操作行（此前与物品卡视觉不一致的根源）。 */
   function renderCollectionCard(entry) {
-    var icon = collectionCatIcon(entry.category);
     var live = hasLiveFile(entry.id);
     var blobUrl = live ? getCollectionBlobUrl(entry.id) : '';
     var isImage = entry.fileMeta && String(entry.fileMeta.mime).indexOf('image/') === 0;
-    var cover = isImage && live ? '<img class="collection-cover" src="' + blobUrl + '" alt="' + escapeHtml(entry.title) + '">' : '<div class="collection-cover collection-cover-icon">' + icon + '</div>';
+    var cover = isImage && live ? '<img class="collection-cover" src="' + blobUrl + '" alt="' + escapeHtml(entry.title) + '">' : '';
     var relinkBadge = entry.fileMeta && !live ? '<button type="button" class="file-badge" data-action="collection-file-relink" data-id="' + entry.id + '" title="重新选择本地文件">📎 文件需重新关联</button>' : '';
     var fileLine = entry.fileMeta ? '<div class="muted collection-file">' + (live ? '📄 ' : '') + escapeHtml(entry.fileMeta.name) + '（' + formatFileSize(entry.fileMeta.size) + '）</div>' : '';
-    return '<div class="collection-card bp-card" data-action="collection-open" data-id="' + entry.id + '">' + relinkBadge + cover + '<div class="collection-body">' + '<div class="collection-title">' + escapeHtml(entry.title) + '</div>' + '<div class="collection-tags">' + renderCollectionCategory(entry) + '</div>' + (entry.note ? '<div class="collection-note">' + escapeHtml(entry.note) + '</div>' : '') + fileLine + '<div class="collection-foot">' + '<span class="muted">' + escapeHtml(entry.createdAt) + '</span>' + '<span class="task-actions">' + '<button class="icon-btn" data-action="collection-edit" data-id="' + entry.id + '">编辑</button>' + '<button class="icon-btn danger" data-action="collection-delete" data-id="' + entry.id + '">删除</button>' + '</span>' + '</div>' + '</div>' + '</div>';
+    return '<div class="collection-card bp-card" data-action="collection-open" data-id="' + entry.id + '">' + relinkBadge + cover + '<div class="item-head">' + renderCollectionCategory(entry) + '<span class="task-actions">' + '<button class="icon-btn" data-action="collection-edit" data-id="' + entry.id + '">编辑</button>' + '<button class="icon-btn danger" data-action="collection-delete" data-id="' + entry.id + '">删除</button>' + '</span>' + '</div>' + '<div class="item-name">' + escapeHtml(entry.title) + '</div>' + (entry.note ? '<div class="item-desc">' + escapeHtml(entry.note) + '</div>' : '<div class="item-desc">—</div>') + fileLine + '<div class="muted item-date">收藏时间：' + escapeHtml(entry.createdAt) + '</div>' + '</div>';
   }
 
   /* ==================== 模态 ==================== */
@@ -11868,10 +11894,12 @@ var backpackTab = 'all';
     var yearSec = '<section class="dash-section d4" id="dashYear">' + '<div class="dash-section-title">🎯 ' + todayStr().slice(0, 4) + ' 年度统计</div>' + '<div class="year-grid">' + yearCards + '</div>' + '<p class="dash-summary">' + escapeHtml(summaries.year) + '</p>' + '</section>';
 
     // 视图切换（v5：日历并入数据页作为子视图）
+    // v1.0.3 迭代 3：控件升级为顶部分段 Tab（与设置页主题切换同款 .seg），
+    // 常驻标题行右侧——两个子视图共用同一页面框架，切换不跳页不变形。
     var viewChip = function viewChip(key, text) {
-      return '<button class="range-chip' + (dashboardView === key ? ' active' : '') + '" data-action="dash-view" data-view="' + key + '">' + text + '</button>';
+      return '<button class="seg-btn' + (dashboardView === key ? ' active' : '') + '" data-action="dash-view" data-view="' + key + '">' + text + '</button>';
     };
-    var viewSwitch = '<div class="dash-range-switch dash-view-switch">' + viewChip('overview', '📊 数据概览') + viewChip('calendar', '📅 日历视图') + '</div>';
+    var viewSwitch = '<div class="seg dash-view-seg" role="tablist">' + viewChip('overview', '📊 数据概览') + viewChip('calendar', '📅 日历视图') + '</div>';
 
     // 日历视图：直接复用 pages.js 的日历区块，避免两份渲染逻辑
     var isCal = dashboardView === 'calendar';
@@ -11879,7 +11907,7 @@ var backpackTab = 'all';
     var calHint = isCal ? '<p class="dash-hint dash-caliber">点任意日期可查看当天的 To Do、灵感记录与任务备注更新。</p>' : '';
     var container = document.getElementById('content');
     if (container) {
-      container.innerHTML = '<section class="page">' + '<div class="page-head">' + '<h2 class="page-title">数据</h2>' + '</div>' + viewSwitch + (isCal ? calHint : '<p class="dash-hint dash-caliber">' + escapeHtml(caliber) + '</p>') + (isCal ? calSec : daySec + weekSec + monthSec + trendSec + timelineSec + yearSec) + '</section>';
+      container.innerHTML = '<section class="page">' + '<div class="page-head">' + '<h2 class="page-title">数据</h2>' + viewSwitch + '</div>' + (isCal ? calHint : '<p class="dash-hint dash-caliber">' + escapeHtml(caliber) + '</p>') + (isCal ? calSec : daySec + weekSec + monthSec + trendSec + timelineSec + yearSec) + '</section>';
     }
     if (typeof animateCounters === 'function') animateCounters();
 
@@ -15172,9 +15200,19 @@ var backpackTab = 'all';
         /* ---------- v5：数据页视图切换（数据概览 / 日历视图） ---------- */
         /* 同上：必须走 setter，否则「📅 日历视图」点了不生效。 */
         case 'dash-view':
-          if (typeof setDashboardView === 'function') setDashboardView(btn.dataset.view);else dashboardView = btn.dataset.view === 'calendar' ? 'calendar' : 'overview';
-          refreshCurrentPage();
-          break;
+          {
+            // v1.0.3 迭代 3：概览 ⇄ 日历同页切换时保持阅读位置——重渲会重置 window 滚动，
+            // 先记 scrollY，渲染完原位恢复，页面框架不跳不闪。
+            var keepY = typeof window !== 'undefined' && typeof window.scrollY === 'number' ? window.scrollY : 0;
+            if (typeof setDashboardView === 'function') setDashboardView(btn.dataset.view);else dashboardView = btn.dataset.view === 'calendar' ? 'calendar' : 'overview';
+            refreshCurrentPage();
+            if (keepY > 0 && typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+              try {
+                window.scrollTo(0, keepY);
+              } catch (e) {/* 恢复失败不影响功能 */}
+            }
+            break;
+          }
 
         /* ---------- v5：主页记录点击 → 跳转数据看板并高亮对应区块 ---------- */
         case 'jump-dashboard':
@@ -15930,6 +15968,10 @@ var backpackTab = 'all';
     if (typeof globalThis !== "undefined" && typeof globalThis.handleBackpackSearchInput === "undefined") globalThis.handleBackpackSearchInput = handleBackpackSearchInput;
   } catch (e) {}
   E.renderItemCard = renderItemCard;
+  E.emptyStateHtml = emptyStateHtml;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.emptyStateHtml === "undefined") globalThis.emptyStateHtml = emptyStateHtml;
+  } catch (e) {}
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.renderItemCard === "undefined") globalThis.renderItemCard = renderItemCard;
   } catch (e) {}
@@ -17537,22 +17579,30 @@ var backpackTab = 'all';
 
     // v1.0.3 迭代：增量刷新 —— 不再整页 renderMap()（销毁重建地图会白屏一拍、新点迟到）。
     // 编辑时先摘掉旧标记再重挂，新点直接打点 + 平移居中 + 弹信息窗，视野立刻到位。
-    if (amap && amapReady()) {
-      if (editId && mapMarkers[editId]) {
-        try {
-          mapMarkers[editId].setMap(null);
-        } catch (e) {/* 忽略 */}
-        delete mapMarkers[editId];
+    // v1.0.3 迭代 3 加固：增量链路任何一环抛错（SDK 边缘情况）都兜底全量渲染，
+    // 并保证列表刷新无条件执行 —— 用户「添加后立刻能看到」，绝不依赖手动刷新页面。
+    try {
+      if (amap && amapReady()) {
+        if (editId && mapMarkers[editId]) {
+          try {
+            mapMarkers[editId].setMap(null);
+          } catch (e) {/* 忽略 */}
+          delete mapMarkers[editId];
+        }
+        var loc = isEdit ? getLocationById(editId) : res.entry || null;
+        if (loc) {
+          addMapMarker(loc);
+          amap.setCenter([loc.lng, loc.lat]);
+          amap.setZoom(12);
+          showLocationPopup(loc);
+        }
+      } else {
+        renderMap(); // 地图不可用（SDK 未就绪 / 降级列表）：退回全量渲染兜底
       }
-      var loc = isEdit ? getLocationById(editId) : res.entry || null;
-      if (loc) {
-        addMapMarker(loc);
-        amap.setCenter([loc.lng, loc.lat]);
-        amap.setZoom(12);
-        showLocationPopup(loc);
-      }
-    } else {
-      renderMap(); // 地图不可用（SDK 未就绪 / 降级列表）：退回全量渲染兜底
+    } catch (e) {
+      try {
+        renderMap();
+      } catch (e2) {/* 极端情况下列表仍在下方无条件刷新 */}
     }
     refreshMapList();
   }

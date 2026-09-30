@@ -638,12 +638,14 @@ function renderDashboard() {
     '</section>';
 
   // 视图切换（v5：日历并入数据页作为子视图）
+  // v1.0.3 迭代 3：控件升级为顶部分段 Tab（与设置页主题切换同款 .seg），
+  // 常驻标题行右侧——两个子视图共用同一页面框架，切换不跳页不变形。
   const viewChip = function (key, text) {
-    return '<button class="range-chip' + (dashboardView === key ? ' active' : '') +
+    return '<button class="seg-btn' + (dashboardView === key ? ' active' : '') +
       '" data-action="dash-view" data-view="' + key + '">' + text + '</button>';
   };
   const viewSwitch =
-    '<div class="dash-range-switch dash-view-switch">' +
+    '<div class="seg dash-view-seg" role="tablist">' +
       viewChip('overview', '📊 数据概览') + viewChip('calendar', '📅 日历视图') +
     '</div>';
 
@@ -662,8 +664,8 @@ function renderDashboard() {
       '<section class="page">' +
         '<div class="page-head">' +
           '<h2 class="page-title">数据</h2>' +
+          viewSwitch +
         '</div>' +
-        viewSwitch +
         (isCal ? calHint : '<p class="dash-hint dash-caliber">' + escapeHtml(caliber) + '</p>') +
         (isCal
           ? calSec

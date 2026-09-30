@@ -93,27 +93,33 @@ function renderCollectionsTab() {
         ? all.filter(function (c) { return !c.category; })
         : all.filter(function (c) { return c.category === collectionCatFilter; }));
 
+  // v1.0.3 迭代 3：空状态统一走 emptyStateHtml（与物品 Tab 完全同款大引导卡）。
+  // 注意跨文件通道：emptyStateHtml 定义在 pages.js（闭包私有），必须经导出对象 E 调用，
+  // 直接 typeof 裸调在闭包内恒为 undefined（这正是此前收藏夹空状态退化成细提示条的原因）。
+  function _empty(emoji, title, msg, btn) {
+    if (typeof E !== 'undefined' && E && typeof E.emptyStateHtml === 'function') {
+      return E.emptyStateHtml(emoji, title, msg, btn);
+    }
+    return '<div class="card empty">' + emoji + ' ' + escapeHtml(title) + '，' + btn + '</div>';
+  }
+
   const bodyHtml = getCollectionCategoryList().length === 0
     // v1.0.3 迭代：无分类但有收藏时直接平铺展示全部收藏（此前被空状态盖住，收藏条目直接消失），
     // 顶部只放一条轻提示引导建分类 —— 引导与数据可见性两不误。
     ? (all.length
         ? '<div class="card empty category-empty">🏷️ 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点此创建分类</button>归置更清爽；以下是全部收藏：</div>' +
           '<div class="collection-grid bp-grid">' + all.map(renderCollectionCard).join('') + '</div>'
-        : (typeof emptyStateHtml === 'function'
-            ? emptyStateHtml('🏷️', '还没有收藏分类',
-                '收藏夹按分类归置更清爽：书籍、影视、文章、灵感……先建一个分类，再把想留住的收进来。',
-                '<button class="btn btn-primary" data-action="collection-manage-categories">创建分类</button>')
-            : '<div class="card empty category-empty">📭 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点击管理分类</button>创建第一个吧~</div>'))
+        : _empty('🏷️', '还没有收藏分类',
+            '收藏夹按分类归置更清爽：书籍、影视、文章、灵感……先建一个分类，再把想留住的收进来。',
+            '<button class="btn btn-primary" data-action="collection-manage-categories">创建分类</button>'))
     : (filtered.length
         ? '<div class="collection-grid bp-grid">' + filtered.map(renderCollectionCard).join('') + '</div>'
         // v1.2.1：空状态引导（emoji 插画 + 说明 + 直达按钮）
         : (all.length
           ? '<div class="card empty">🔍 该分类下暂无收藏，换个分类看看~</div>'
-          : (typeof emptyStateHtml === 'function'
-            ? emptyStateHtml('📚', '收藏夹空着呢',
-                '值得回看的东西都往这儿放：一篇好文章、一段聊天记录、一张截图，还能附上原文件。',
-                '<button class="btn btn-primary" data-action="collection-new">+ 添加第一条收藏</button>')
-            : '<div class="card empty">📭 还没有收藏，点击右上角「+ 新收藏」收藏第一件宝贝~</div>')));
+          : _empty('📚', '收藏夹空着呢',
+              '值得回看的东西都往这儿放：一篇好文章、一段聊天记录、一张截图，还能附上原文件。',
+              '<button class="btn btn-primary" data-action="collection-new">+ 添加第一条收藏</button>')));
 
   return bodyHtml;
 }
@@ -124,16 +130,18 @@ function renderCollectionCategory(entry) {
   return '<span class="badge collection-cat-badge">' + (cat ? escapeHtml(cat) : '未分类') + '</span>';
 }
 
-/** 收藏卡片：图片类以 blob 缩略图为封面；fileMeta 在而二进制不在 → 「需重新关联」角标 */
+/** 收藏卡片：图片类以 blob 缩略图为封面；fileMeta 在而二进制不在 → 「需重新关联」角标
+ *  v1.0.3 迭代 3：骨架与物品卡（renderItemCard）完全同构 —— 顶部徽章+编辑/删除行、
+ *  标题、备注、附件行、时间行，同类名同对齐；封面图仅在有图片附件时保留为顶部横幅，
+ *  不再有 icon 大色块与底部操作行（此前与物品卡视觉不一致的根源）。 */
 function renderCollectionCard(entry) {
-  const icon = collectionCatIcon(entry.category);
   const live = hasLiveFile(entry.id);
   const blobUrl = live ? getCollectionBlobUrl(entry.id) : '';
   const isImage = entry.fileMeta && String(entry.fileMeta.mime).indexOf('image/') === 0;
 
   const cover = isImage && live
     ? '<img class="collection-cover" src="' + blobUrl + '" alt="' + escapeHtml(entry.title) + '">'
-    : '<div class="collection-cover collection-cover-icon">' + icon + '</div>';
+    : '';
 
   const relinkBadge = entry.fileMeta && !live
     ? '<button type="button" class="file-badge" data-action="collection-file-relink" data-id="' +
@@ -149,19 +157,19 @@ function renderCollectionCard(entry) {
     '<div class="collection-card bp-card" data-action="collection-open" data-id="' + entry.id + '">' +
       relinkBadge +
       cover +
-      '<div class="collection-body">' +
-        '<div class="collection-title">' + escapeHtml(entry.title) + '</div>' +
-        '<div class="collection-tags">' + renderCollectionCategory(entry) + '</div>' +
-        (entry.note ? '<div class="collection-note">' + escapeHtml(entry.note) + '</div>' : '') +
-        fileLine +
-        '<div class="collection-foot">' +
-          '<span class="muted">' + escapeHtml(entry.createdAt) + '</span>' +
-          '<span class="task-actions">' +
-            '<button class="icon-btn" data-action="collection-edit" data-id="' + entry.id + '">编辑</button>' +
-            '<button class="icon-btn danger" data-action="collection-delete" data-id="' + entry.id + '">删除</button>' +
-          '</span>' +
-        '</div>' +
+      '<div class="item-head">' +
+        renderCollectionCategory(entry) +
+        '<span class="task-actions">' +
+          '<button class="icon-btn" data-action="collection-edit" data-id="' + entry.id + '">编辑</button>' +
+          '<button class="icon-btn danger" data-action="collection-delete" data-id="' + entry.id + '">删除</button>' +
+        '</span>' +
       '</div>' +
+      '<div class="item-name">' + escapeHtml(entry.title) + '</div>' +
+      (entry.note
+        ? '<div class="item-desc">' + escapeHtml(entry.note) + '</div>'
+        : '<div class="item-desc">—</div>') +
+      fileLine +
+      '<div class="muted item-date">收藏时间：' + escapeHtml(entry.createdAt) + '</div>' +
     '</div>'
   );
 }

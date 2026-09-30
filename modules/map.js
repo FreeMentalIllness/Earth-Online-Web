@@ -398,20 +398,26 @@
 
     // v1.0.3 迭代：增量刷新 —— 不再整页 renderMap()（销毁重建地图会白屏一拍、新点迟到）。
     // 编辑时先摘掉旧标记再重挂，新点直接打点 + 平移居中 + 弹信息窗，视野立刻到位。
-    if (amap && amapReady()) {
-      if (editId && mapMarkers[editId]) {
-        try { mapMarkers[editId].setMap(null); } catch (e) { /* 忽略 */ }
-        delete mapMarkers[editId];
+    // v1.0.3 迭代 3 加固：增量链路任何一环抛错（SDK 边缘情况）都兜底全量渲染，
+    // 并保证列表刷新无条件执行 —— 用户「添加后立刻能看到」，绝不依赖手动刷新页面。
+    try {
+      if (amap && amapReady()) {
+        if (editId && mapMarkers[editId]) {
+          try { mapMarkers[editId].setMap(null); } catch (e) { /* 忽略 */ }
+          delete mapMarkers[editId];
+        }
+        const loc = isEdit ? getLocationById(editId) : (res.entry || null);
+        if (loc) {
+          addMapMarker(loc);
+          amap.setCenter([loc.lng, loc.lat]);
+          amap.setZoom(12);
+          showLocationPopup(loc);
+        }
+      } else {
+        renderMap(); // 地图不可用（SDK 未就绪 / 降级列表）：退回全量渲染兜底
       }
-      const loc = isEdit ? getLocationById(editId) : (res.entry || null);
-      if (loc) {
-        addMapMarker(loc);
-        amap.setCenter([loc.lng, loc.lat]);
-        amap.setZoom(12);
-        showLocationPopup(loc);
-      }
-    } else {
-      renderMap(); // 地图不可用（SDK 未就绪 / 降级列表）：退回全量渲染兜底
+    } catch (e) {
+      try { renderMap(); } catch (e2) { /* 极端情况下列表仍在下方无条件刷新 */ }
     }
     refreshMapList();
   }

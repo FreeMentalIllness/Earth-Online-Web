@@ -535,7 +535,16 @@ html.is-scrolling .more-panel {
 
 .item-grid, .collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .item-card { padding: 14px 16px; }
-.collection-card { overflow: hidden; cursor: pointer; position: relative; }
+/* v1.0.3 迭代 3：收藏卡与物品卡同构 —— 同 padding；封面满宽出血（抵消卡片 padding）；
+   旧 collection-body/title/foot 结构已由 item-head/item-name/item-desc/item-date 取代。 */
+.collection-card { padding: 14px 16px; overflow: hidden; position: relative; cursor: pointer; }
+.collection-card .collection-cover {
+  width: calc(100% + 32px); max-width: none;
+  margin: -14px -16px 12px;
+  border-radius: 0;
+}
+.collection-card .item-head { margin-bottom: 8px; }
+.collection-card .collection-cover ~ .item-head { margin-top: 0; }
 .item-card:hover, .collection-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--amber); }
 
 /* 开关按钮：胶囊形，开态用主题主色，附「开 / 关」文字提示 */
@@ -2247,15 +2256,20 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 }
 .search-kind { font-size: var(--font-caption); color: var(--caption); flex: none; }
 
-/* ---- 21. 隐私政策弹窗 ---- */
-.modal-wide { max-width: 640px; width: 92vw; }
+/* ---- 21. 隐私政策 / 更新说明弹窗 ----
+   v1.0.3 迭代 3：面板调大（640→760px、可视高 52→62vh）；横向滑动移除——
+   外层 .modal-wide 裁掉横向溢出，内层 .privacy-body 只保留纵向滚动，
+   长行文本用 overflow-wrap 断行，不再出现左右拖动。 */
+.modal-wide { max-width: 760px; width: 92vw; overflow-x: hidden; }
 .privacy-body {
-  max-height: 52vh; overflow-y: auto;
+  max-height: 62vh; overflow-y: auto; overflow-x: hidden;
+  min-width: 0;
   display: flex; flex-direction: column; gap: 14px;
   padding: 4px 2px;
 }
+.privacy-sec { min-width: 0; }
 .privacy-sec-title { font-weight: 700; font-size: var(--font-body); margin-bottom: 4px; }
-.privacy-sec-body { font-size: var(--font-caption); color: var(--muted); line-height: 1.7; }
+.privacy-sec-body { font-size: var(--font-caption); color: var(--muted); line-height: 1.7; overflow-wrap: anywhere; }
 
 /* ==================== 体检 · 设置页 UI 尺寸统一 ==================== */
 

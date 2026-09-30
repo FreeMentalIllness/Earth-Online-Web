@@ -3226,11 +3226,18 @@ function bindGlobalEvents() {
 
       /* ---------- v5：数据页视图切换（数据概览 / 日历视图） ---------- */
       /* 同上：必须走 setter，否则「📅 日历视图」点了不生效。 */
-      case 'dash-view':
+      case 'dash-view': {
+        // v1.0.3 迭代 3：概览 ⇄ 日历同页切换时保持阅读位置——重渲会重置 window 滚动，
+        // 先记 scrollY，渲染完原位恢复，页面框架不跳不闪。
+        const keepY = (typeof window !== 'undefined' && typeof window.scrollY === 'number') ? window.scrollY : 0;
         if (typeof setDashboardView === 'function') setDashboardView(btn.dataset.view);
         else dashboardView = (btn.dataset.view === 'calendar') ? 'calendar' : 'overview';
         refreshCurrentPage();
+        if (keepY > 0 && typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+          try { window.scrollTo(0, keepY); } catch (e) { /* 恢复失败不影响功能 */ }
+        }
         break;
+      }
 
       /* ---------- v5：主页记录点击 → 跳转数据看板并高亮对应区块 ---------- */
       case 'jump-dashboard': {
@@ -3867,6 +3874,8 @@ function renderMapAuto() {
   E.handleBackpackSearchInput = handleBackpackSearchInput;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.handleBackpackSearchInput === "undefined") globalThis.handleBackpackSearchInput = handleBackpackSearchInput; } catch (e) {}
   E.renderItemCard = renderItemCard;
+  E.emptyStateHtml = emptyStateHtml;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.emptyStateHtml === "undefined") globalThis.emptyStateHtml = emptyStateHtml; } catch (e) {}
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderItemCard === "undefined") globalThis.renderItemCard = renderItemCard; } catch (e) {}
   E.renderCategoryGroup = renderCategoryGroup;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderCategoryGroup === "undefined") globalThis.renderCategoryGroup = renderCategoryGroup; } catch (e) {}
