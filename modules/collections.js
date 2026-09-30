@@ -81,7 +81,9 @@ function formatFileSize(bytes) {
 
 /* ==================== 渲染 ==================== */
 
-/** 收藏 tab 主体 HTML（由 pages.js renderBackpack 在 collection tab 下拼入） */
+/** 收藏 tab 主体 HTML（由 pages.js renderBackpack 在 collection tab 下拼入）。
+ *  v1.0.3 迭代：搜索框与分类栏已上移到 renderBackpack 统一渲染（与物品 Tab 同构同类名），
+ *  本函数只负责卡片主体：网格 / 空状态。 */
 function renderCollectionsTab() {
   const keyword = String(collectionSearchKeyword == null ? '' : collectionSearchKeyword);
   const all = searchCollections(keyword);
@@ -91,28 +93,17 @@ function renderCollectionsTab() {
         ? all.filter(function (c) { return !c.category; })
         : all.filter(function (c) { return c.category === collectionCatFilter; }));
 
-  const cats = getCollectionCategoryList();
-  const noneCount = all.filter(function (c) { return !c.category; }).length;
-
-  const chips = [{ key: 'all', label: '全部' }]
-    .concat(cats.map(function (c) {
-      const n = all.filter(function (x) { return x.category === c; }).length;
-      return { key: c, label: c + '（' + n + '）' };
-    }))
-    .concat(noneCount ? [{ key: '__none__', label: '未分类（' + noneCount + '）' }] : [])
-    .map(function (c) {
-      return '<button type="button" class="cat-chip ' + (collectionCatFilter === c.key ? 'active' : '') +
-        '" data-action="collection-cat-filter" data-cat="' + escapeHtml(c.key) + '">' +
-        escapeHtml(c.label) + '</button>';
-    }).join('');
-
-  const bodyHtml = cats.length === 0
-    // 空状态与「物品」Tab 统一：一律走 emptyStateHtml（大插画 + 说明 + 直达按钮）
-    ? (typeof emptyStateHtml === 'function'
-        ? emptyStateHtml('🏷️', '还没有收藏分类',
-            '收藏夹按分类归置更清爽：书籍、影视、文章、灵感……先建一个分类，再把想留住的收进来。',
-            '<button class="btn btn-primary" data-action="collection-manage-categories">创建分类</button>')
-        : '<div class="card empty category-empty">📭 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点击管理分类</button>创建第一个吧~</div>')
+  const bodyHtml = getCollectionCategoryList().length === 0
+    // v1.0.3 迭代：无分类但有收藏时直接平铺展示全部收藏（此前被空状态盖住，收藏条目直接消失），
+    // 顶部只放一条轻提示引导建分类 —— 引导与数据可见性两不误。
+    ? (all.length
+        ? '<div class="card empty category-empty">🏷️ 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点此创建分类</button>归置更清爽；以下是全部收藏：</div>' +
+          '<div class="collection-grid bp-grid">' + all.map(renderCollectionCard).join('') + '</div>'
+        : (typeof emptyStateHtml === 'function'
+            ? emptyStateHtml('🏷️', '还没有收藏分类',
+                '收藏夹按分类归置更清爽：书籍、影视、文章、灵感……先建一个分类，再把想留住的收进来。',
+                '<button class="btn btn-primary" data-action="collection-manage-categories">创建分类</button>')
+            : '<div class="card empty category-empty">📭 还没有分类，<button type="button" class="link-btn" data-action="collection-manage-categories">点击管理分类</button>创建第一个吧~</div>'))
     : (filtered.length
         ? '<div class="collection-grid bp-grid">' + filtered.map(renderCollectionCard).join('') + '</div>'
         // v1.2.1：空状态引导（emoji 插画 + 说明 + 直达按钮）
@@ -124,23 +115,7 @@ function renderCollectionsTab() {
                 '<button class="btn btn-primary" data-action="collection-new">+ 添加第一条收藏</button>')
             : '<div class="card empty">📭 还没有收藏，点击右上角「+ 新收藏」收藏第一件宝贝~</div>')));
 
-  // 工具区与「物品」Tab 对齐：搜索框独占整行，下一行最左侧是「⚙️ 分类管理」按钮
-  // （与物品 Tab 的按钮落点完全一致）；分类筛选 chips 排在按钮右侧并可横向滑动。
-  // 无分类时不渲染 chips —— 否则只剩一个孤零零、点了也没意义的「全部」。
-  const filterRow =
-    '<div class="bp-filter-row">' +
-      '<button class="btn btn-ghost btn-sm" data-action="collection-manage-categories">⚙️ 分类管理</button>' +
-      (cats.length ? '<div class="cat-chip-row">' + chips + '</div>' : '') +
-    '</div>';
-
-  return (
-    '<div class="backpack-search-row">' +
-      '<input id="collectionSearch" class="list-input" data-action="collection-search" ' +
-        'placeholder="搜索标题 / 备注" value="' + escapeHtml(keyword) + '">' +
-    '</div>' +
-    filterRow +
-    bodyHtml
-  );
+  return bodyHtml;
 }
 
 /** 把分类渲染成一枚徽章（未分类回落「未分类」） */

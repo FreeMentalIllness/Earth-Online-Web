@@ -2394,9 +2394,9 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 
 /* 回归鼓励（不惩罚，只邀请） */
 .comeback-card {
-  margin: 10px 0;
+  margin: var(--space-gap) 0;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: rgba(138, 170, 138, 0.14);
   color: #4c6b4c;
   font-size: 13px;
@@ -2407,13 +2407,13 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 .hero-xp strong { color: #8a5a2e; }
 
 /* 历年今日回忆卡 */
-.memory-card { margin: 10px 0; }
+.memory-card { margin: var(--space-gap) 0; }
 .memory-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; }
 .memory-icon { flex: none; }
 .memory-more, .memory-foot { margin-top: 6px; font-size: 12px; }
 
 /* 今日一签 */
-.luck-card { margin: 10px 0; }
+.luck-card { margin: var(--space-gap) 0; }
 .luck-body { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 14px; }
 .luck-icon { flex: none; font-size: 18px; }
 .luck-foot { margin-top: 6px; font-size: 12px; }
@@ -2479,6 +2479,15 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
   border-radius: var(--radius-control); transition: var(--transition);
 }
 .card-head-link:hover { background: var(--bg-soft); color: var(--amber); }
+
+/* v1.0.3 迭代：卡片标题行右侧工具组（查看链接 + 显示设置齿轮） */
+.card-head-tools { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
+.card-head-gear {
+  font-size: 13px; line-height: 1; color: var(--text-soft);
+  background: transparent; border: none; cursor: pointer;
+  padding: 4px 6px; border-radius: var(--radius-control); transition: var(--transition);
+}
+.card-head-gear:hover { background: var(--bg-soft); color: var(--amber); transform: rotate(30deg); }
 
 /* 背包分类标签栏：常驻于「分类管理」按钮右侧、可横向滚动 */
 .bp-cat-bar { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }

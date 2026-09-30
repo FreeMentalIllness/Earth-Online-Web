@@ -356,6 +356,59 @@ function todayStr(d) {
   return y + '-' + m + '-' + day;
 }
 
+/* ==================== v1.0.3 迭代：主页信息流 UI 偏好 ==================== */
+/**
+ * 「最近动态 / 人生时间轴」的展示偏好（条数 + 内容类型开关）。
+ * 刻意**不放进 earth_data 主存档**：这属于设备级 UI 偏好而非人生数据，
+ * 独立键可避免触碰三端 JSON 数据契约与 WebDAV 合并语义（主存档键结构零变更）。
+ * 存储键：earth_ui_prefs（localStorage，存不下时静默降级为默认值，绝不抛错）。
+ */
+var UI_PREFS_KEY = 'earth_ui_prefs';
+var UI_PREFS_DEFAULTS = {
+  actCount: 3,                                        // 最近动态条数 3 | 5 | 10
+  actTypes: { task: true, ach: true, item: true },    // 最近动态内容类型
+  tlCount: 16,                                        // 人生时间轴条数 8 | 16 | 30
+  tlTypes: { task: true, ach: true, loc: true },      // 时间轴事件类型
+};
+
+/** 读 UI 偏好：坏数据 / 缺字段一律逐项回落默认值，保证返回结构永远完整 */
+function uiPrefsLoad() {
+  const merged = JSON.parse(JSON.stringify(UI_PREFS_DEFAULTS));
+  try {
+    // 读通道与写通道严格对称：先 EOStore 内存镜像（getSync），未命中再兜底 localStorage
+    var raw = null;
+    if (typeof EOStore !== 'undefined' && EOStore && EOStore.getSync) {
+      try { raw = EOStore.getSync(UI_PREFS_KEY); } catch (e) { raw = null; }
+    }
+    if (raw == null && typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(UI_PREFS_KEY);
+    }
+    if (!raw) return merged;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== 'object') return merged;
+    if ([3, 5, 10].indexOf(obj.actCount) !== -1) merged.actCount = obj.actCount;
+    if ([8, 16, 30].indexOf(obj.tlCount) !== -1) merged.tlCount = obj.tlCount;
+    ['task', 'ach', 'item'].forEach(function (k) {
+      if (obj.actTypes && typeof obj.actTypes[k] === 'boolean') merged.actTypes[k] = obj.actTypes[k];
+    });
+    ['task', 'ach', 'loc'].forEach(function (k) {
+      if (obj.tlTypes && typeof obj.tlTypes[k] === 'boolean') merged.tlTypes[k] = obj.tlTypes[k];
+    });
+  } catch (e) { /* 解析失败回落默认 */ }
+  return merged;
+}
+
+/** 写 UI 偏好：EOStore.set（同步更新内存镜像 + 异步落盘）为主，localStorage 双写兜底 */
+function uiPrefsSave(prefs) {
+  try {
+    const payload = JSON.stringify(prefs || {});
+    if (typeof EOStore !== 'undefined' && EOStore && EOStore.set) {
+      try { EOStore.set(UI_PREFS_KEY, payload); } catch (e) { /* 落 localStorage 兜底 */ }
+    }
+    if (typeof localStorage !== 'undefined') localStorage.setItem(UI_PREFS_KEY, payload);
+  } catch (e) { /* 存储不可用时仅本次会话生效 */ }
+}
+
 /**
  * 时间比较统一口径工具（v4 新增，设计文档 §6.2）
  * 存档中存在两种时间格式，混用会导致跨 UTC 日界错判：
@@ -2036,6 +2089,10 @@ function deleteLocation(id) {
   E.uid = uid;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.uid === "undefined") globalThis.uid = uid; } catch (e) {}
   E.todayStr = todayStr;
+  E.uiPrefsLoad = uiPrefsLoad;
+  E.uiPrefsSave = uiPrefsSave;
+  try { if (typeof globalThis !== 'undefined' && typeof globalThis.uiPrefsLoad === 'undefined') globalThis.uiPrefsLoad = uiPrefsLoad; } catch (e) {}
+  try { if (typeof globalThis !== 'undefined' && typeof globalThis.uiPrefsSave === 'undefined') globalThis.uiPrefsSave = uiPrefsSave; } catch (e) {}
   try { if (typeof globalThis !== "undefined" && typeof globalThis.todayStr === "undefined") globalThis.todayStr = todayStr; } catch (e) {}
   E.dayKeyOf = dayKeyOf;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.dayKeyOf === "undefined") globalThis.dayKeyOf = dayKeyOf; } catch (e) {}

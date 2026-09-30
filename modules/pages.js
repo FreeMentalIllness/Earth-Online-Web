@@ -422,7 +422,12 @@ function renderHome() {
   const recentMemos = state.memos.slice()
     .sort(function (a, b) { return b.createdAt.localeCompare(a.createdAt); })
     .slice(0, 5);
-  const recentActs = (state.activities || []).slice(-3).reverse();
+  /* v1.0.3 迭代：最近动态支持用户自定义（条数 + 内容类型），偏好存 earth_ui_prefs（设备级，不进主存档） */
+  const feedPrefs = (typeof uiPrefsLoad === 'function') ? uiPrefsLoad()
+    : { actCount: 3, actTypes: { task: true, ach: true, item: true }, tlCount: 16, tlTypes: { task: true, ach: true, loc: true } };
+  const recentActs = (state.activities || [])
+    .filter(function (a) { return a && feedPrefs.actTypes[a.kind] !== false; })
+    .slice(-feedPrefs.actCount).reverse();
 
   const username = profile.name ? escapeHtml(profile.name) : '地球玩家';
 
@@ -582,15 +587,16 @@ function renderHome() {
     '</button>';
   }).join('');
 
-  /* 3. v1.2.0：快速入口固定 8 个（两行四列）。
-     顺序按使用频次排：第一行「创建 / 查看」，第二行「记录 / 工具」。 */
+  /* 3. v1.0.3 迭代：快速入口 8 个（两行四列），纯动作型 + 移动端必需入口。
+     此前「查看成就 / 系统」分别与概览卡「成就」、底部 Tab「系统」重复，已移除；
+     补入「新收藏 / 记足迹」两个高频动作，全格无一与底部导航 / 概览卡重复。 */
   const quickDefs = [
     { action: 'home-new-task', icon: '📝', label: '新建任务' },
     { action: 'home-add-item', icon: '🎒', label: '添加物品' },
-    { action: 'home-ach', icon: '🏆', label: '查看成就' },
+    { action: 'home-add-collection', icon: '⭐', label: '新收藏' },
+    { action: 'home-add-location', icon: '📍', label: '记足迹' },
     { action: 'home-today', icon: '📅', label: '今日日程' },
     { action: 'home-mood', icon: '🎭', label: '心情' },
-    { action: 'home-ai', icon: '🤖', label: '系统' },
     { action: 'open-verifin', icon: '📊', label: '记账' },
     { action: 'nav', page: 'map', icon: '🗺️', label: '足迹地图' },
   ];
@@ -669,7 +675,10 @@ function renderHome() {
     }
   });
   timelineEvents.sort(function (a, b) { return a.time < b.time ? 1 : (a.time > b.time ? -1 : 0); });
-  const tlShow = timelineEvents.slice(0, 16);
+  /* v1.0.3 迭代：时间轴条数与事件类型可自定义（同存 earth_ui_prefs） */
+  const tlShow = timelineEvents
+    .filter(function (e) { return feedPrefs.tlTypes[e.type] !== false; })
+    .slice(0, feedPrefs.tlCount);
   const tlIcon = { task: '📋', ach: '🏆', loc: '🗺️' };
   const timelineHtml = tlShow.length
     ? '<div class="timeline">' + tlShow.map(function (e) {
@@ -793,12 +802,18 @@ function renderHome() {
 
       '<div class="card act-card">' +
         '<div class="card-title card-title-row">📡 最近动态' +
-          '<button class="card-head-link" data-action="nav" data-page="data">查看 ›</button></div>' +
+          '<span class="card-head-tools">' +
+            '<button class="card-head-link" data-action="nav" data-page="data">查看 ›</button>' +
+            '<button class="card-head-gear" data-action="home-feed-settings" title="显示设置" aria-label="最近动态显示设置">⚙️</button>' +
+          '</span></div>' +
         '<div class="act-list">' + actRows + '</div>' +
       '</div>' +
 
       '<div class="card timeline-card">' +
-        '<div class="card-title">🕰️ 人生时间轴</div>' +
+        '<div class="card-title card-title-row">🕰️ 人生时间轴' +
+          '<span class="card-head-tools">' +
+            '<button class="card-head-gear" data-action="home-feed-settings" title="显示设置" aria-label="人生时间轴显示设置">⚙️</button>' +
+          '</span></div>' +
         timelineHtml +
       '</div>' +
 
@@ -1358,17 +1373,40 @@ function renderBackpack() {
     .concat(['<button class="tab ' + (isCollection ? 'active' : '') + '" data-action="backpack-tab" data-tab="collection">⭐ 收藏夹（' + collectionCount + '）</button>'])
     .join('');
 
-  // v1.0.3：分类标签栏 —— 常驻展示在「分类管理」按钮右侧，物品 / 收藏夹两视图均可见、可横向滚动。
-  // 新建分类后立即出现；点击按分类筛选物品（在收藏夹视图下点击则切回物品视图并应用筛选）。
-  const catChips = ['<button class="bp-cat-chip ' + (backpackCatFilter === 'all' ? 'active' : '') +
-      '" data-action="bp-cat-filter" data-cat="all">全部</button>']
-    .concat(cats.map(function (c) {
-      return '<button class="bp-cat-chip ' + (backpackCatFilter === c.id ? 'active' : '') +
-        '" data-action="bp-cat-filter" data-cat="' + c.id + '">' + escapeHtml(c.name) + '</button>';
-    })).join('');
+  // v1.0.3 迭代：两个 Tab 的工具区结构完全统一 —— 同一行「搜索框 → 分类栏（分类管理按钮 + 横滑 chips）」。
+  // 此前物品 Tab 用 bp-cat-bar、收藏夹用 bp-filter-row（cat-chip），且收藏夹视图下物品分类栏照常渲染，
+  // 出现两个「⚙️ 分类管理」+ 两行 chips 重叠错位。现在每 Tab 只渲染自己的分类栏，结构、类名、视觉一套。
+  let catChipsHtml;
+  if (isCollection) {
+    const colCats = getCollectionCategoryList();
+    const colNone = (state.collections || []).filter(function (c) { return !c.category; }).length;
+    const colChipHtml = [{ k: 'all', label: '全部' }]
+      .concat(colCats.map(function (c) {
+        const n = (state.collections || []).filter(function (x) { return x.category === c; }).length;
+        return { k: c, label: c + '（' + n + '）' };
+      }))
+      .concat(colNone ? [{ k: '__none__', label: '未分类（' + colNone + '）' }] : [])
+      .map(function (c) {
+        const curFilter = (typeof collectionCatFilter !== 'undefined') ? collectionCatFilter : 'all';
+        const active = curFilter === c.k ? ' active' : '';
+        return '<button class="bp-cat-chip' + active + '" data-action="collection-cat-filter" data-cat="' +
+          escapeHtml(c.k) + '">' + escapeHtml(c.label) + '</button>';
+      }).join('');
+    catChipsHtml = colCats.length ? '<div class="bp-cat-row">' + colChipHtml + '</div>' : '';
+  } else {
+    const catChips = ['<button class="bp-cat-chip ' + (backpackCatFilter === 'all' ? 'active' : '') +
+        '" data-action="bp-cat-filter" data-cat="all">全部</button>']
+      .concat(cats.map(function (c) {
+        return '<button class="bp-cat-chip ' + (backpackCatFilter === c.id ? 'active' : '') +
+          '" data-action="bp-cat-filter" data-cat="' + c.id + '">' + escapeHtml(c.name) + '</button>';
+      })).join('');
+    catChipsHtml = cats.length ? '<div class="bp-cat-row">' + catChips + '</div>' : '';
+  }
   const catBar = '<div class="bp-cat-bar">' +
-      '<button class="btn btn-ghost btn-sm" data-action="manage-categories">⚙️ 分类管理</button>' +
-      (cats.length ? '<div class="bp-cat-row">' + catChips + '</div>' : '') +
+      (isCollection
+        ? '<button class="btn btn-ghost btn-sm" data-action="collection-manage-categories">⚙️ 分类管理</button>'
+        : '<button class="btn btn-ghost btn-sm" data-action="manage-categories">⚙️ 分类管理</button>') +
+      catChipsHtml +
     '</div>';
 
   let body;
@@ -1397,6 +1435,18 @@ function renderBackpack() {
             '<button class="btn btn-primary" data-action="item-new">添加第一件物品</button>'));
   }
 
+  // 搜索行：两 Tab 各自字面量渲染（id / data-action 保持静态字面量，供静态检查与焦点恢复）
+  const searchRow = isCollection
+    ? '<div class="backpack-search-row">' +
+        '<input id="collectionSearch" class="list-input" data-action="collection-search" ' +
+          'placeholder="搜索标题 / 备注" value="' + escapeHtml(
+            (typeof collectionSearchKeyword !== 'undefined') ? String(collectionSearchKeyword == null ? '' : collectionSearchKeyword) : '') + '">' +
+      '</div>'
+    : '<div class="backpack-search-row">' +
+        '<input id="backpackSearch" class="list-input" data-action="backpack-search" ' +
+          'placeholder="搜索名称 / 分类" value="' + escapeHtml(backpackSearch) + '">' +
+      '</div>';
+
   document.getElementById('content').innerHTML =
     '<section class="page">' +
       '<div class="page-head">' +
@@ -1406,11 +1456,7 @@ function renderBackpack() {
           : '<button class="btn btn-primary" data-action="item-new">添加</button>') +
       '</div>' +
       '<div class="tabs">' + chips + '</div>' +
-      (isCollection ? '' :
-        '<div class="backpack-search-row">' +
-          '<input id="backpackSearch" class="list-input" data-action="backpack-search" ' +
-            'placeholder="搜索名称 / 分类" value="' + escapeHtml(backpackSearch) + '">' +
-        '</div>') +
+      searchRow +
       catBar +
       body +
     '</section>';
@@ -1663,16 +1709,9 @@ function renderCalendarDetail() {
         '<div><div class="detail-sub">灵感闪念</div>' + memoHtml + '</div>' +
         '<div><div class="detail-sub">任务备注更新</div>' + noteHtml + '</div>' +
       '</div>' +
-      '<div class="cal-note-block">' +
-        '<div class="cal-note-title">📝 当天随手记</div>' +
-        '<textarea id="calNoteInput" class="cal-note-textarea" placeholder="给这一天写点什么…">' + escapeHtml(ev.notes[0] || '') + '</textarea>' +
-        // v15：「清除」按钮常驻显示 —— 此前按 ev.notes[0] 条件渲染，保存后需要整块重渲才会出现，
-        // 而重渲会销毁 textarea 导致输入焦点丢失（即「输入框自动退出」）。改为常驻后保存/清除都不必重渲。
-        '<div class="modal-actions">' +
-          '<button class="btn btn-primary btn-sm" data-action="calendar-note-save">保存记录</button>' +
-          '<button class="btn btn-ghost btn-sm" data-action="calendar-note-clear">清除</button>' +
-        '</div>' +
-      '</div>' +
+      // v1.0.3 迭代：移除内联「当天随手记」编辑块（textarea + 保存/清除按钮）——
+      // 与点日期弹出的写入框功能重复，且曾因「空内容点保存」误报「已清除」造成反馈混乱。
+      // 写入口统一收敛到 openCalendarEntryModal（点日期直接写灵感 / ToDo）。
     '</div>'
   );
 }
@@ -1782,6 +1821,54 @@ function handleCalendarEntrySave(dateStr) {
   }
   closeModal();
   rerenderCalendarHost();
+}
+
+/* ==================== v1.0.3 迭代：主页信息流显示设置 ==================== */
+
+/**
+ * 「最近动态 / 人生时间轴」显示设置模态：条数单选 + 内容类型开关。
+ * 偏好存 earth_ui_prefs（core.js），改动即时生效并刷新主页。
+ */
+function openHomeFeedSettingsModal() {
+  const prefs = (typeof uiPrefsLoad === 'function') ? uiPrefsLoad()
+    : { actCount: 3, actTypes: { task: true, ach: true, item: true }, tlCount: 16, tlTypes: { task: true, ach: true, loc: true } };
+
+  function countRow(label, dim, cur, options) {
+    return '<div class="form-row"><label>' + label + '</label><div class="cat-chip-row">' +
+      options.map(function (n) {
+        return '<button type="button" class="cat-chip ' + (cur === n ? 'active' : '') +
+          '" data-action="home-feed-count" data-count="' + dim + ':' + n + '">' + n + ' 条</button>';
+      }).join('') + '</div></div>';
+  }
+  function typeRow(label, dim, group, defs) {
+    return '<div class="form-row"><label>' + label + '</label><div class="cat-chip-row">' +
+      defs.map(function (d) {
+        return '<button type="button" class="cat-chip ' + (group[d.key] !== false ? 'active' : '') +
+          '" data-action="home-feed-type" data-type="' + dim + ':' + d.key + '">' + d.icon + ' ' + d.label + '</button>';
+      }).join('') + '</div></div>';
+  }
+
+  openModal(
+    '<h3 class="modal-title">🎛️ 主页信息流设置</h3>' +
+    '<p class="modal-text">调整主页「最近动态」与「人生时间轴」的展示内容。设置仅对本设备生效，不影响存档数据。</p>' +
+    countRow('最近动态 · 条数', 'act', prefs.actCount, [3, 5, 10]) +
+    typeRow('最近动态 · 内容', 'act', prefs.actTypes, [
+      { key: 'task', icon: '📋', label: '任务' },
+      { key: 'ach', icon: '🏆', label: '成就' },
+      { key: 'item', icon: '🎒', label: '物品' },
+    ]) +
+    countRow('人生时间轴 · 条数', 'tl', prefs.tlCount, [8, 16, 30]) +
+    typeRow('人生时间轴 · 内容', 'tl', prefs.tlTypes, [
+      { key: 'task', icon: '📋', label: '完成任务' },
+      { key: 'ach', icon: '🏆', label: '成就' },
+      { key: 'loc', icon: '🗺️', label: '足迹' },
+    ]) +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-primary" id="feedPrefsDone">完成</button>' +
+    '</div>'
+  );
+  const done = document.getElementById('feedPrefsDone');
+  if (done) done.onclick = function () { closeModal(); refreshCurrentPage(); };
 }
 
 /* ==================== 成就 ==================== */
@@ -2865,27 +2952,9 @@ function bindGlobalEvents() {
         openCalendarEntryModal(btn.dataset.date);
         break;
       }
-      case 'calendar-note-save': {
-        // v15：保存后不再整块重渲 —— 重渲会替换 textarea 节点，造成「输入框自动退出」（焦点/光标丢失）。
-        // 文本内容此刻已在输入框里，就地写库即可，UI 无需重建。
-        const noteEl = document.getElementById('calNoteInput');
-        const v = noteEl ? String(noteEl.value).trim() : '';
-        if (v) state.calendarNotes[calendarSelected] = v;
-        else delete state.calendarNotes[calendarSelected];
-        saveState();
-        toast(v ? '已保存当天记录' : '已清除当天记录');
-        if (noteEl && typeof noteEl.focus === 'function') { try { noteEl.focus(); } catch (e) { /* 忽略 */ } }
-        break;
-      }
-      case 'calendar-note-clear': {
-        // v15：同样就地清空，不重渲，避免 textarea 被销毁
-        const noteEl = document.getElementById('calNoteInput');
-        delete state.calendarNotes[calendarSelected];
-        saveState();
-        if (noteEl) { noteEl.value = ''; if (typeof noteEl.focus === 'function') { try { noteEl.focus(); } catch (e) { /* 忽略 */ } } }
-        toast('已清除当天记录');
-        break;
-      }
+      /* v1.0.3 迭代：内联随手记的 save/clear 入口已随编辑块一并移除，handler 不再保留。
+         保存语义唯一化：写入只走 openCalendarEntryModal（成功 toast「已保存」），
+         不存在「点保存却提示已清除」的歧义路径。 */
       case 'calendar-entry-type':
         setCalendarEntryType(btn.dataset.type);
         break;
@@ -2925,8 +2994,17 @@ function bindGlobalEvents() {
         navigate('backpack');
         openItemModal(null, '', null);
         break;
-      case 'home-ach':
-        navigate('achievements');
+      /* v1.0.3 迭代：新收藏 / 记足迹（替代与概览卡、底部 Tab 重复的「查看成就 / 系统」两格） */
+      case 'home-add-collection':
+        navigate('backpack');
+        backpackTab = 'collection';
+        renderBackpack();
+        if (typeof openCollectionModal === 'function') openCollectionModal(null);
+        break;
+      case 'home-add-location':
+        navigate('map');
+        // 跨文件调用走显式导出对象（不裸调）：map.js 已把 newLocation 挂到 E.map
+        if (typeof E !== 'undefined' && E.map && typeof E.map.newLocation === 'function') E.map.newLocation();
         break;
       case 'home-today':
         openTodayModal();
@@ -2934,9 +3012,39 @@ function bindGlobalEvents() {
       case 'home-memo-add':
         saveHomeMemo(document.getElementById('homeMemoInput'));
         break;
-      case 'home-ai':
-        navigate('ai');
+      /* ---------- v1.0.3 迭代：主页信息流（最近动态 / 人生时间轴）显示设置 ---------- */
+      case 'home-feed-settings':
+        openHomeFeedSettingsModal();
         break;
+      case 'home-feed-count': {
+        // data-count="act:5|tl:16" —— 一组 chips 两种维度，保存后立即生效
+        const pair = String(btn.dataset.count || '').split(':');
+        const prefs = (typeof uiPrefsLoad === 'function') ? uiPrefsLoad() : null;
+        if (prefs && pair.length === 2) {
+          const n = parseInt(pair[1], 10);
+          if (pair[0] === 'act' && [3, 5, 10].indexOf(n) !== -1) prefs.actCount = n;
+          if (pair[0] === 'tl' && [8, 16, 30].indexOf(n) !== -1) prefs.tlCount = n;
+          if (typeof uiPrefsSave === 'function') uiPrefsSave(prefs);
+        }
+        openHomeFeedSettingsModal(); // 重开模态刷新选中态（openModal 会整体替换内容）
+        break;
+      }
+      case 'home-feed-type': {
+        // data-type="act:task|tl:loc" —— 切换类型开关（至少保留一项，避免空列表无引导）
+        const pair2 = String(btn.dataset.type || '').split(':');
+        const prefs2 = (typeof uiPrefsLoad === 'function') ? uiPrefsLoad() : null;
+        if (prefs2 && pair2.length === 2) {
+          const group = pair2[0] === 'act' ? prefs2.actTypes : (pair2[0] === 'tl' ? prefs2.tlTypes : null);
+          if (group && Object.prototype.hasOwnProperty.call(group, pair2[1])) {
+            const enabledCount = Object.keys(group).filter(function (k) { return group[k]; }).length;
+            if (group[pair2[1]] && enabledCount <= 1) { toast('至少保留一种内容'); break; }
+            group[pair2[1]] = !group[pair2[1]];
+            if (typeof uiPrefsSave === 'function') uiPrefsSave(prefs2);
+          }
+        }
+        openHomeFeedSettingsModal();
+        break;
+      }
       /* ---------- v1.2.0：心情 / 表情包入口（快速入口第 5 格） ---------- */
       case 'close-modal':
         closeModal();

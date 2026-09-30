@@ -85,11 +85,11 @@
           '<div id="mapStatus" class="map-status"></div>' +
         '</div>' +
         '<div class="map-list-head">' +
-          '<button class="btn btn-ghost btn-sm" data-action="map-list-toggle">' +
+          '<button class="btn btn-ghost btn-sm" id="mapListToggleBtn" data-action="map-list-toggle">' +
             (mapListCollapsed ? '展开列表（' + count + '）' : '收起列表') +
           '</button>' +
         '</div>' +
-        (mapListCollapsed ? '' : renderMapLocationList()) +
+        '<div id="mapListWrap">' + (mapListCollapsed ? '' : renderMapLocationList()) + '</div>' +
       '</section>';
 
     ensureAMap(function (ok) {
@@ -334,6 +334,21 @@
     }
   }
 
+  /**
+   * v1.0.3 迭代：新增 / 删除 / 编辑足迹后的「增量刷新」。
+   * 此前一律 renderMap() 整页重建 —— 地图实例销毁再异步重建，新坐标要等白屏过后才出现，
+   * 用户感知就是「添加了但地图不动」。现在只更新列表 DOM 与计数按钮，地图直接打点 + 平移居中。
+   */
+  function refreshMapList() {
+    const wrap = document.getElementById('mapListWrap');
+    if (wrap) wrap.innerHTML = renderMapLocationList();
+    const toggleBtn = document.getElementById('mapListToggleBtn');
+    if (toggleBtn) {
+      const count = (state.locations || []).length;
+      toggleBtn.textContent = mapListCollapsed ? '展开列表（' + count + '）' : '收起列表';
+    }
+  }
+
   /** 新建 / 编辑足迹模态 */
   function openMapModal(loc, preset) {
     const isEdit = !!loc;
@@ -358,6 +373,10 @@
   }
 
   function handleMapSave(editId) {
+    // v1.0.3 迭代修复：handleMapSave 一直引用未定义的 isEdit（形参只有 editId），
+    // 保存成功后 toast(isEdit ? ...) 直接抛 ReferenceError，
+    // 导致其后的地图刷新 / 列表刷新从不执行 —— 这就是「添加足迹后地图不能立刻显示新坐标」的根因。
+    const isEdit = !!editId;
     const errEl = document.getElementById('mpError');
     const name = val('mpName').trim();
     const lat = val('mpLat');
@@ -376,7 +395,25 @@
     if (!res || !res.ok) { if (errEl) errEl.textContent = (res && res.error) || '保存失败'; return; }
     closeModal();
     toast(isEdit ? '足迹已更新' : '已记录足迹：' + name);
-    renderMap();
+
+    // v1.0.3 迭代：增量刷新 —— 不再整页 renderMap()（销毁重建地图会白屏一拍、新点迟到）。
+    // 编辑时先摘掉旧标记再重挂，新点直接打点 + 平移居中 + 弹信息窗，视野立刻到位。
+    if (amap && amapReady()) {
+      if (editId && mapMarkers[editId]) {
+        try { mapMarkers[editId].setMap(null); } catch (e) { /* 忽略 */ }
+        delete mapMarkers[editId];
+      }
+      const loc = isEdit ? getLocationById(editId) : (res.entry || null);
+      if (loc) {
+        addMapMarker(loc);
+        amap.setCenter([loc.lng, loc.lat]);
+        amap.setZoom(12);
+        showLocationPopup(loc);
+      }
+    } else {
+      renderMap(); // 地图不可用（SDK 未就绪 / 降级列表）：退回全量渲染兜底
+    }
+    refreshMapList();
   }
 
   function confirmDeleteLocation(id) {
@@ -387,7 +424,7 @@
       deleteLocation(id);
       closeModal();
       toast('足迹已删除');
-      renderMap();
+      refreshMapList(); // v1.0.3 迭代：增量刷新列表，不再整页重建地图
     });
   }
 
