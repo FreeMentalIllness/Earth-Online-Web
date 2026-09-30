@@ -16995,6 +16995,19 @@ var backpackTab = 'all';
   /** 注册 sw.js；注册失败一律静默（离线运行是增强项，失败不应打扰用户） */
   function registerServiceWorker() {
     try {
+      // 控制者切换监听必须在 register 之前挂上，否则首次接管事件可能在注册回调前就已错过。
+      // 判定规则：页面加载时就没有控制者（首次访问）→ 随后第一次切换是初始接管，不算更新；
+      //           页面加载时已有控制者（老用户）→ 任何切换都是新 SW 接管，提示刷新。
+      if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
+        var initialClaimPending = !navigator.serviceWorker.controller;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (initialClaimPending) {
+            initialClaimPending = false;
+            return;
+          }
+          showUpdateReady();
+        });
+      }
       // updateViaCache:'none' 让浏览器每次都向服务器复核 sw.js，避免 sw 自身被 HTTP 缓存而迟迟不更新
       var reg = navigator.serviceWorker.register('sw.js', {
         updateViaCache: 'none'
@@ -17009,11 +17022,9 @@ var backpackTab = 'all';
   }
 
   /**
-   * 更新提示接线：
+   * 更新提示接线（控制者切换监听在 registerServiceWorker 中已提前挂好）：
    * - 若已有等待激活的新 SW（未启用 skipWaiting 时），通知其立即接管；
-   * - 监听 updatefound：新 SW 装好且当前仍有旧控制者 → 弹「新版本已就绪」；
-   * - 监听 controllerchange：控制者切换（新 SW 接管）时弹提示。
-   * 首次注册导致的「从无控制者到被接管」不算更新，用 firstClaimHandled 过滤，避免误弹。
+   * - 监听 updatefound：新 SW 装好且当前仍有旧控制者 → 弹「新版本已就绪」。
    */
   function wireUpdatePrompt(reg) {
     try {
@@ -17029,16 +17040,6 @@ var backpackTab = 'all';
               showUpdateReady();
             }
           });
-        });
-      }
-      if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
-        var firstClaimHandled = false;
-        navigator.serviceWorker.addEventListener('controllerchange', function () {
-          if (!firstClaimHandled) {
-            firstClaimHandled = true;
-            return;
-          } // 首次接管（初始注册）不提示
-          showUpdateReady();
         });
       }
     } catch (e) {/* 任何异常都不应阻断主流程 */}
