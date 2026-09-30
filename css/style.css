@@ -1349,6 +1349,26 @@ html.is-scrolling .more-panel {
 }
 
 /* =========================================================
+   v1.0.5：设置页危险区（清空数据）
+   红色边框强调 + 模态内警示文字与勾选框；深色模式随 --sem-red 变量自动适配。
+   ========================================================= */
+.danger-zone {
+  border: 1px solid rgba(184, 80, 63, 0.45);
+  background: rgba(184, 80, 63, 0.04);
+}
+.danger-zone .card-title { color: var(--sem-red); }
+.reset-warn-text { color: var(--sem-red); }
+.modal-check {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: var(--font-body); line-height: 1.6;
+  color: var(--text); cursor: pointer;
+  margin-bottom: 16px; user-select: none;
+}
+.modal-check input[type="checkbox"] {
+  width: 16px; height: 16px; margin-top: 3px; accent-color: var(--sem-red); cursor: pointer;
+}
+
+/* =========================================================
    v4 PART2：数据看板
    卡片全部实色 --panel + 1px 边框，零毛玻璃新增面；
    入场动画 fill-mode 必须是 backwards（both 会形成 backdrop root

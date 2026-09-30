@@ -2332,12 +2332,18 @@ function renderSettings() {
         '</div>' +
       '</div>' +
 
-      '<div class="card">' +
-        '<div class="card-title">🗃️ 本地存档</div>' +
-        '<p class="muted">所有数据仅保存在本浏览器中（键名前缀 ' + STORAGE_PREFIX + '），不会上传到任何服务器。</p>' +
+      // v1.0.5：危险区 —— 清空数据（醒目确认 + 可选删云端 + 防同步拉回）
+      '<div class="card danger-zone">' +
+        '<div class="card-title">⚠️ 危险区</div>' +
+        '<p class="muted">清空本机全部用户数据（任务、日志、物品、成就、收藏、足迹、个人资料等），' +
+          '并恢复为全新种子数据。<b>清空后无法撤销</b>，建议先「导出备份」。' +
+          '主题、壁纸、WebDAV 与 AI 配置等应用设置会保留；清空后会暂停一次启动时的云端自动拉取，' +
+          '防止旧备份被同步回来。</p>' +
         '<div class="form-inline">' +
-          '<button class="btn btn-danger" data-action="reset-data">清空并重置为种子数据</button>' +
+          '<button class="btn btn-danger" data-action="reset-data">🗑️ 清空数据</button>' +
+          '<button class="btn btn-ghost" data-action="reset-resync">☁️ 重新同步（上传当前数据到云端）</button>' +
         '</div>' +
+        '<p class="backup-note">「重新同步」会把当前（清空后的）数据上传云端覆盖旧备份，用于恢复多设备同步。</p>' +
       '</div>' +
 
       /* ==================== ④ 关于 ==================== */
@@ -2360,6 +2366,71 @@ function handleSaveBirth(v) {
   checkAutoAchievements();
   toast('出生日期已更新，等级重新计算');
   return true;
+}
+
+/* ==================== v1.0.5：清空数据 —— 醒目二次确认模态 ==================== */
+
+/**
+ * 「清空数据」确认模态：红色警示 + 可选勾选「同时删除云端备份」（默认不勾）。
+ * 确认流程：置防拉回标记 →（勾选时）删云端备份 → 本地清空 resetAllData → 刷新回主页。
+ * 删除云端失败不阻断本地清空（会明确提示）。
+ */
+function openResetDataConfirm() {
+  const hasCfg = (typeof loadWebdavConfig === 'function') ? (function () {
+    const c = loadWebdavConfig();
+    return !!(c && (c.url || c.user || c.pass));
+  })() : false;
+  openModal(
+    '<h3 class="modal-title">⚠️ 确认清空数据</h3>' +
+    '<p class="modal-text reset-warn-text">此操作将<b>清空本机全部用户数据</b>' +
+      '（任务、日志、物品、成就、收藏、足迹、个人资料、日历随手记等），' +
+      '并恢复为全新种子数据。<b>清空后无法撤销</b>。</p>' +
+    '<p class="modal-text">主题、壁纸、WebDAV 与 AI 配置等应用设置会保留。' +
+      (hasCfg ? '云端备份默认保留，清空后暂停一次自动拉取。' : '当前未配置 WebDAV，仅清空本地数据。') +
+      '</p>' +
+    (hasCfg
+      ? '<label class="modal-check"><input type="checkbox" id="resetCloudDel">' +
+        '同时删除云端备份（WebDAV 服务器上的存档文件）</label>'
+      : '') +
+    '<div class="modal-actions modal-actions-equal">' +
+      '<button class="btn btn-ghost" id="resetDataCancel">取消</button>' +
+      '<button class="btn btn-danger" id="resetDataConfirm">确认清空</button>' +
+    '</div>'
+  );
+  const cancel = document.getElementById('resetDataCancel');
+  if (cancel) cancel.onclick = closeModal;
+  const confirmBtn = document.getElementById('resetDataConfirm');
+  if (confirmBtn) confirmBtn.onclick = function () {
+    const delCloud = !!(document.getElementById('resetCloudDel') &&
+      document.getElementById('resetCloudDel').checked);
+    // 1. 无论是否删云端，都先置防拉回标记（本地清空后绝不能让旧备份拉回来）
+    if (typeof markSkipNextPull === 'function') markSkipNextPull();
+    // 2. 勾选了删云端 → 等 DELETE 结束再清本地（成败都继续，失败明确提示）
+    if (delCloud && typeof webdavDeleteRemote === 'function') {
+      confirmBtn.disabled = true;
+      if (cancel) cancel.disabled = true;
+      webdavDeleteRemote().then(function (res) {
+        if (res && res.ok) {
+          toast('云端备份已删除');
+        } else {
+          toast((res && res.error) ? ('云端删除失败：' + res.error) : '云端删除失败，仅清空本地数据');
+        }
+        finishReset();
+      });
+    } else {
+      finishReset();
+    }
+  };
+  function finishReset() {
+    closeModal();
+    try { resetAllData(); } catch (e) { toast('清空失败，数据未改动'); return; }
+    toast('已清空全部用户数据');
+    if (typeof setTimeout === 'function') {
+      setTimeout(function () {
+        try { location.reload(); } catch (e) { /* 测试环境忽略 */ }
+      }, 400);
+    }
+  }
 }
 
 /* ==================== 灵感闪念 ==================== */
@@ -3167,9 +3238,17 @@ function bindGlobalEvents() {
         renderAchievements();
         break;
       case 'reset-data':
-        openConfirm('将清空所有本地数据并恢复为种子数据，确定吗？', function () {
-          resetAllData();
-        });
+        openResetDataConfirm();
+        break;
+
+      case 'reset-resync':
+        // 清空后的「重新同步」：把当前（清空后的）数据上传云端覆盖旧备份，恢复多设备同步。
+        // 复用 webdavUploadBackup：读取设置页表单 + 校验 + PUT，btn=null 时加载态自动跳过。
+        if (typeof webdavUploadBackup === 'function') {
+          openConfirm('将把当前数据上传到云端覆盖旧备份（多设备将以此为准），确定继续吗？', function () {
+            webdavUploadBackup(null);
+          });
+        }
         break;
 
       /* ---------- v8：AI 助手（配置 / 发送 / 清空对话） ---------- */
@@ -3961,4 +4040,6 @@ function renderMapAuto() {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.randomQuote === "undefined") globalThis.randomQuote = randomQuote; } catch (e) {}
   E.renderMapAuto = renderMapAuto;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.renderMapAuto === "undefined") globalThis.renderMapAuto = renderMapAuto; } catch (e) {}
+  E.openResetDataConfirm = openResetDataConfirm;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.openResetDataConfirm === "undefined") globalThis.openResetDataConfirm = openResetDataConfirm; } catch (e) {}
 })();

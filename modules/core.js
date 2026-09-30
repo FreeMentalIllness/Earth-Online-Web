@@ -994,10 +994,51 @@ function saveState() {
   try { if (typeof scheduleAutoBackup === 'function') scheduleAutoBackup(); } catch (e) { /* 忽略 */ }
 }
 
-/** 清空「当前账号」的存档并恢复种子数据（不影响其他账号） */
+/**
+ * 清空全部用户数据并恢复种子数据（v1.0.5「清空数据」统一语义）。
+ *
+ * 清空范围：
+ *   - 主存档 earth_data（任务/日志/物品/成就/收藏/足迹/资料/日历随手记等全部用户数据）；
+ *   - 用户数据附加键：成就备份、导入前快照、本地自动备份系列、v19 之前的旧账号残留键。
+ * 保留范围（应用设置，绝不误删）：
+ *   - state.aiConfig（AI 助手配置）→ 回填到新种子；
+ *   - earth_theme / earth_wallpaper / wallpaper_blob / earth_font_scale / earth_ui_prefs
+ *     （主题、壁纸、字号、主页信息流偏好）；
+ *   - earth_online_webdav_v1（WebDAV 配置）、earth_notify / earth_ach_sound（提醒与音效开关）、
+ *     earth_online_pwa_tip_v1、earth_migrated（迁移标记，清了会触发重复迁移）。
+ * 调用方（pages.js 的清空确认模态）负责：置防拉回标记、可选删云端、刷新页面。
+ */
 function resetAllData() {
+  // 1. 抢救 AI 配置（深拷贝，避免引用悬挂）
+  var keepAi = null;
+  try {
+    if (state && state.aiConfig && typeof state.aiConfig === 'object') {
+      keepAi = JSON.parse(JSON.stringify(state.aiConfig));
+    }
+  } catch (e) { keepAi = null; }
+
+  // 2. 清主存档
   try { EOStore.remove(currentStorageKey()); } catch (e) { /* 忽略 */ }
-  location.reload();
+
+  // 3. 清用户数据附加键（键名用 STORAGE_PREFIX 拼接，勿引用 backup.js 常量 —— 加载顺序在先）
+  try {
+    const achBakKey = STORAGE_PREFIX + 'achievements_backup_v1';
+    const autobakIdxKey = STORAGE_PREFIX + 'autobackup_index';
+    const autobakPrefix = STORAGE_PREFIX + 'autobackup_';
+    const allKeys = EOStore.keys();
+    for (let i = 0; i < allKeys.length; i++) {
+      const k = allKeys[i];
+      if (k === achBakKey || k === autobakIdxKey || k.indexOf(autobakPrefix) === 0 ||
+          (k.indexOf('earth_data_') === 0)) {
+        try { EOStore.remove(k); } catch (e) { /* 单键失败跳过 */ }
+      }
+    }
+  } catch (e) { /* 枚举失败不阻断主流程 */ }
+
+  // 4. 重建种子并回填 AI 配置（同步落盘，reload 后 loadState 直读新种子）
+  state = defaultState();
+  if (keepAi) state.aiConfig = keepAi;
+  try { EOStore.set(currentStorageKey(), state); } catch (e) { /* 忽略 */ }
 }
 
 /**

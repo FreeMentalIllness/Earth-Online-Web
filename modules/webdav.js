@@ -39,6 +39,12 @@ const WEBDAV_AUTOSYNC_MS = 30 * 60 * 1000;
 const WEBDAV_DEFAULT_SCHEME = ['https', '://'].join('');
 /** 密码密文前缀（用于区分「已编码」与「历史明文」，实现向后兼容） */
 const WEBDAV_SECRET_PREFIX = 'wd1:';
+/**
+ * 防同步拉回标记（清空数据专用）：置位后下一次冷启动自动拉取会被跳过（消费一次即失效）。
+ * 场景：用户清空本地数据后，若云端还留着旧备份，启动拉取会把旧数据整包拉回来，
+ * 「清空」就形同虚设。此标记与 EOStore 双写（见 markSkipNextPull 注释）。
+ */
+const WEBDAV_SKIP_PULL_KEY = STORAGE_PREFIX + 'skip_next_pull';
 
 /* ==================== 纯函数（无副作用，QA 可直测） ==================== */
 
@@ -522,6 +528,87 @@ function webdavToggleAutoSync(btn) {
 }
 
 /**
+ * 置位「下次启动跳过自动拉取」标记。
+ * 存取必须同通道：EOStore 无 setSync（getSync 读 IndexedDB 内存镜像，
+ * 直接写 localStorage 的值 getSync 读不到），故这里 set + localStorage 双写；
+ * 读取侧 getSync + localStorage 兜底（见 consumeSkipNextPull）。
+ */
+function markSkipNextPull() {
+  try {
+    if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.set === 'function') {
+      EOStore.set(WEBDAV_SKIP_PULL_KEY, true);
+    }
+  } catch (e) { /* 忽略 */ }
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage) {
+      localStorage.setItem(WEBDAV_SKIP_PULL_KEY, '1');
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
+/**
+ * 读取并消费「跳过一次自动拉取」标记（读后即清，只拦截下一次）。
+ * @returns {boolean} true 表示本次应跳过冷启动拉取
+ */
+function consumeSkipNextPull() {
+  var hit = false;
+  try {
+    if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.getSync === 'function') {
+      hit = EOStore.getSync(WEBDAV_SKIP_PULL_KEY) === true;
+    }
+  } catch (e) { /* 忽略 */ }
+  try {
+    if (!hit && typeof localStorage !== 'undefined' && localStorage) {
+      hit = localStorage.getItem(WEBDAV_SKIP_PULL_KEY) === '1';
+    }
+  } catch (e) { /* 忽略 */ }
+  // 无论读到与否都清一次，保证「只拦一次」语义
+  try {
+    if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.remove === 'function') {
+      EOStore.remove(WEBDAV_SKIP_PULL_KEY);
+    }
+  } catch (e) { /* 忽略 */ }
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage) {
+      localStorage.removeItem(WEBDAV_SKIP_PULL_KEY);
+    }
+  } catch (e) { /* 忽略 */ }
+  return hit;
+}
+
+/**
+ * 删除云端备份文件（HTTP DELETE）。
+ * - 404 视为成功（云端本来就没有备份，语义上目标已达成）；
+ * - 2xx 视为成功；其余状态码 / 网络失败返回失败原因（调用方决定是否提示）。
+ * @param {Object} cfg 可选；缺省时读当前已保存配置
+ * @returns {Promise<{ok: boolean, status: number, error: string}>}
+ */
+function webdavDeleteRemote(cfg) {
+  return new Promise(function (resolve) {
+    try {
+      const c = cfg || loadWebdavConfig();
+      const v = validateWebdavConfig(c);
+      if (!v.ok) { resolve({ ok: false, status: 0, error: '尚未配置 WebDAV，云端无备份可删' }); return; }
+      const url = buildWebdavFileUrl(c);
+      const auth = webdavBasicAuth(c.user, decodeWebdavSecret(c.pass));
+      webdavFetch(url, { method: 'DELETE', headers: { Authorization: auth } })
+        .then(function (res) {
+          if (res.status === 404 || res.ok) {
+            resolve({ ok: true, status: res.status, error: '' });
+          } else {
+            resolve({ ok: false, status: res.status, error: describeWebdavError(null, res.status) });
+          }
+        })
+        .catch(function (err) {
+          resolve({ ok: false, status: 0, error: describeWebdavError(err, 0) });
+        });
+    } catch (e) {
+      resolve({ ok: false, status: 0, error: '删除请求发起失败' });
+    }
+  });
+}
+
+/**
  * 自动同步：下载云端 → 按修改时间（exportedAt）判定冲突 → 云端更新才处理。
  *
  * - announce=true（冷启动）：直接应用云端数据并刷新，等价于「启动时拉取」；
@@ -531,6 +618,9 @@ function webdavToggleAutoSync(btn) {
  */
 function runWebdavAutoSyncCheck(announce) {
   try {
+    // 清空数据防拉回：冷启动（announce=true）先消费跳过标记，命中则本次不拉取。
+    // 轮询（announce=false）只提示不覆盖数据，不算「拉回」，无需拦截。
+    if (announce && consumeSkipNextPull()) return;
     const cfg = loadWebdavConfig();
     if (!cfg.autoSync) return;
     const v = validateWebdavConfig(cfg);
@@ -794,6 +884,14 @@ function renderWebdavCard() {
   try { if (typeof globalThis !== "undefined" && typeof globalThis.webdavToggleAutoSync === "undefined") globalThis.webdavToggleAutoSync = webdavToggleAutoSync; } catch (e) {}
   E.runWebdavAutoSyncCheck = runWebdavAutoSyncCheck;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.runWebdavAutoSyncCheck === "undefined") globalThis.runWebdavAutoSyncCheck = runWebdavAutoSyncCheck; } catch (e) {}
+  E.WEBDAV_SKIP_PULL_KEY = WEBDAV_SKIP_PULL_KEY;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.WEBDAV_SKIP_PULL_KEY === "undefined") globalThis.WEBDAV_SKIP_PULL_KEY = WEBDAV_SKIP_PULL_KEY; } catch (e) {}
+  E.markSkipNextPull = markSkipNextPull;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.markSkipNextPull === "undefined") globalThis.markSkipNextPull = markSkipNextPull; } catch (e) {}
+  E.consumeSkipNextPull = consumeSkipNextPull;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.consumeSkipNextPull === "undefined") globalThis.consumeSkipNextPull = consumeSkipNextPull; } catch (e) {}
+  E.webdavDeleteRemote = webdavDeleteRemote;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.webdavDeleteRemote === "undefined") globalThis.webdavDeleteRemote = webdavDeleteRemote; } catch (e) {}
   E.initWebdavAutoSync = initWebdavAutoSync;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.initWebdavAutoSync === "undefined") globalThis.initWebdavAutoSync = initWebdavAutoSync; } catch (e) {}
   E.renderWebdavCard = renderWebdavCard;
