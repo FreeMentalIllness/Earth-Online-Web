@@ -14384,7 +14384,8 @@ var backpackTab = 'all';
             return null;
           }
         }();
-        t = _th === 'dark' ? 'dark' : 'light';
+        // v1.0.4：未手动选择（null）时跟随系统深色偏好（与 applyTheme 同语义）
+        if (_th === 'dark') t = 'dark';else if (_th === 'light') t = 'light';else t = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       } catch (e) {}
       var w = null;
       try {
@@ -14432,7 +14433,7 @@ var backpackTab = 'all';
       }].map(function (o) {
         return '<button class="seg-btn' + (fs === o.k ? ' active' : '') + '" data-action="font-scale" data-value="' + o.k + '">' + o.label + '</button>';
       }).join('');
-      return '' + '<div class="card settings-appearance">' + '<div class="card-title">🎨 主题与背景</div>' + '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。</p>' + '<div class="form-row"><span class="field-label">主题</span>' + '<div class="seg">' + '<button class="seg-btn' + (t === 'light' ? ' active' : '') + '" data-action="theme-set" data-theme="light">☀️ 亮色</button>' + '<button class="seg-btn' + (t === 'dark' ? ' active' : '') + '" data-action="theme-set" data-theme="dark">🌙 深色</button>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">壁纸</span>' + '<div class="form-inline wall-row">' + '<button class="btn btn-ghost" data-action="wallpaper-upload">🖼️ 上传图片</button>' + (wtype !== 'none' ? '<button class="btn btn-ghost" data-action="wallpaper-reset">恢复默认</button>' : '') + '<div class="wall-presets">' + presetBtns + '</div>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">字号</span>' + '<div class="seg">' + fsOpts + '</div>' + '</div>' + '<p class="backup-note">字号只影响内容区（侧栏与底栏保持原尺寸），最大档约放大 20%。</p>' + '</div>';
+      return '' + '<div class="card settings-appearance">' + '<div class="card-title">🎨 主题与背景</div>' + '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。未手动选择时自动跟随系统深浅色。</p>' + '<div class="form-row"><span class="field-label">主题</span>' + '<div class="seg">' + '<button class="seg-btn' + (t === 'light' ? ' active' : '') + '" data-action="theme-set" data-theme="light">☀️ 亮色</button>' + '<button class="seg-btn' + (t === 'dark' ? ' active' : '') + '" data-action="theme-set" data-theme="dark">🌙 深色</button>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">壁纸</span>' + '<div class="form-inline wall-row">' + '<button class="btn btn-ghost" data-action="wallpaper-upload">🖼️ 上传图片</button>' + (wtype !== 'none' ? '<button class="btn btn-ghost" data-action="wallpaper-reset">恢复默认</button>' : '') + '<div class="wall-presets">' + presetBtns + '</div>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">字号</span>' + '<div class="seg">' + fsOpts + '</div>' + '</div>' + '<p class="backup-note">字号只影响内容区（侧栏与底栏保持原尺寸），最大档约放大 20%。</p>' + '</div>';
     }() + /* ==================== ② 通用 ==================== */
     groupDivider() + groupTitle('🧩', '通用', '角色 · 记账 · 提醒') +
     // v19：账号卡片移除 → 个人资料卡
@@ -16815,9 +16816,13 @@ var backpackTab = 'all';
 
   /* ==================== 外观：深色模式 + 自定义壁纸（v15 批 B · 16/18） ==================== */
 
-  /** 应用主题：经 EOStore 读取 earth_theme（light/dark），挂到 <html data-theme>。 */
+  /** 应用主题：经 EOStore 读取 earth_theme（light/dark）挂到 <html data-theme>。
+   * v1.0.4 QA 修复：用户从未手动选择（无存档值）时，默认跟随系统深色偏好，
+   * 且系统主题变化时实时跟随；一旦手动选择（写入 light/dark）则以手动为准。 */
+  var _sysThemeWatching = false;
   function applyTheme() {
     var t = 'light';
+    var followed = false; // 是否处于「跟随系统」态
     try {
       var saved = typeof EOStore !== 'undefined' && EOStore && EOStore.getSync ? EOStore.getSync('earth_theme') : function () {
         try {
@@ -16826,8 +16831,23 @@ var backpackTab = 'all';
           return null;
         }
       }();
-      if (saved === 'dark') t = 'dark';
+      if (saved === 'dark') t = 'dark';else if (saved !== 'light') followed = true; // null / 未写入 → 跟随系统
     } catch (e) {/* 隐私模式读不到，默认亮色 */}
+    try {
+      if (followed && typeof window.matchMedia === 'function') {
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        if (mq && typeof mq.matches === 'boolean') t = mq.matches ? 'dark' : 'light';
+        // 实时跟随：系统切换深浅色时未手动选择过的用户立即生效（幂等注册一次）
+        if (!_sysThemeWatching && mq && typeof mq.addEventListener === 'function') {
+          _sysThemeWatching = true;
+          mq.addEventListener('change', function () {
+            try {
+              applyTheme();
+            } catch (e2) {/* 忽略 */}
+          });
+        }
+      }
+    } catch (e) {/* matchMedia 不可用则保持亮色 */}
     document.documentElement.setAttribute('data-theme', t);
   }
 

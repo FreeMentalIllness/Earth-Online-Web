@@ -287,15 +287,33 @@ function setupScrollOptimizer() {
 
 /* ==================== 外观：深色模式 + 自定义壁纸（v15 批 B · 16/18） ==================== */
 
-/** 应用主题：经 EOStore 读取 earth_theme（light/dark），挂到 <html data-theme>。 */
+/** 应用主题：经 EOStore 读取 earth_theme（light/dark）挂到 <html data-theme>。
+ * v1.0.4 QA 修复：用户从未手动选择（无存档值）时，默认跟随系统深色偏好，
+ * 且系统主题变化时实时跟随；一旦手动选择（写入 light/dark）则以手动为准。 */
+var _sysThemeWatching = false;
 function applyTheme() {
   var t = 'light';
+  var followed = false; // 是否处于「跟随系统」态
   try {
     var saved = (typeof EOStore !== 'undefined' && EOStore && EOStore.getSync)
       ? EOStore.getSync('earth_theme')
       : (function () { try { return localStorage.getItem('earth_theme'); } catch (e) { return null; } })();
     if (saved === 'dark') t = 'dark';
+    else if (saved !== 'light') followed = true; // null / 未写入 → 跟随系统
   } catch (e) { /* 隐私模式读不到，默认亮色 */ }
+  try {
+    if (followed && typeof window.matchMedia === 'function') {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mq && typeof mq.matches === 'boolean') t = mq.matches ? 'dark' : 'light';
+      // 实时跟随：系统切换深浅色时未手动选择过的用户立即生效（幂等注册一次）
+      if (!_sysThemeWatching && mq && typeof mq.addEventListener === 'function') {
+        _sysThemeWatching = true;
+        mq.addEventListener('change', function () {
+          try { applyTheme(); } catch (e2) { /* 忽略 */ }
+        });
+      }
+    }
+  } catch (e) { /* matchMedia 不可用则保持亮色 */ }
   document.documentElement.setAttribute('data-theme', t);
 }
 

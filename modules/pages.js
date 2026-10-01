@@ -2133,7 +2133,11 @@ function renderSettings() {
           var _th = (typeof EOStore !== 'undefined' && EOStore && EOStore.getSync)
             ? EOStore.getSync('earth_theme')
             : (function () { try { return localStorage.getItem('earth_theme'); } catch (e) { return null; } })();
-          t = (_th === 'dark') ? 'dark' : 'light';
+          // v1.0.4：未手动选择（null）时跟随系统深色偏好（与 applyTheme 同语义）
+          if (_th === 'dark') t = 'dark';
+          else if (_th === 'light') t = 'light';
+          else t = (typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         } catch (e) {}
         var w = null;
         try {
@@ -2166,7 +2170,7 @@ function renderSettings() {
         return '' +
         '<div class="card settings-appearance">' +
           '<div class="card-title">🎨 主题与背景</div>' +
-          '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。</p>' +
+          '<p class="muted">切换亮色 / 深色主题，或设置主页背景（图片存入浏览器本地数据库，不占普通存储配额）。未手动选择时自动跟随系统深浅色。</p>' +
           '<div class="form-row"><span class="field-label">主题</span>' +
             '<div class="seg">' +
               '<button class="seg-btn' + (t === 'light' ? ' active' : '') + '" data-action="theme-set" data-theme="light">☀️ 亮色</button>' +
