@@ -27,7 +27,7 @@
 var ASSET_VER = '1.0.4';
 
 /** 部署戳：每次发布改这个值（例如 YYYYMMDDHHMM），强制 SW 内容变化、触发自动更新 */
-var BUILD = '20260930-1740';
+var BUILD = '20261001-1340';
 
 /** 缓存名 = 版本 + 部署戳；改名即全量刷新（旧缓存由 activate 清理） */
 var CACHE = 'earth-online-sw-' + ASSET_VER + '-' + BUILD;

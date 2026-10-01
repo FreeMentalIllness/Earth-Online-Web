@@ -98,6 +98,43 @@ async function main() {
 
   fs.writeFileSync(path.join(ROOT, 'index_pakr.html'), html);
   console.log('OK: index_pakr.html written, bytes=' + html.length);
+
+  stampVersion();
+}
+
+/** 自动版本指纹（v1.0.4 QA 建议）：构建时从 core.js 提取版本号，生成「版本-时间戳」，
+ * 同步写入 index.html 本地资源 ?v= 与 sw.js 的 ASSET_VER/BUILD。
+ * 每次构建必然变化 → 消除发布时人工递增版本参数/部署戳的环节。
+ * 注意：只动本地资源引用（css/…css?v= 与 modules/…js?v=），高德 CDN 的 maps?v=2.0 是 API 版本，绝不触碰。 */
+function stampVersion() {
+  const pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+  const now = new Date();
+  const stamp = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes());
+
+  // 1) 版本号取自 core.js 的 APP_INFO.version（单一事实来源）
+  const coreSrc = fs.readFileSync(path.join(ROOT, 'modules/core.js'), 'utf8');
+  const m = coreSrc.match(/version:\s*'(\d+\.\d+\.\d+)'/);
+  if (!m) { console.error('WARN: 未能从 core.js 提取版本号，跳过版本戳'); return; }
+  const ver = m[1];
+  const fingerprint = ver + '-' + stamp;
+
+  // 2) index.html：替换本地资源引用的 ?v= 指纹
+  const idxPath = path.join(ROOT, 'index.html');
+  let idx = fs.readFileSync(idxPath, 'utf8');
+  const idxRe = /((?:css|modules|vendor)\/[A-Za-z0-9._-]+\.(?:css|js))\?v=[^"']*/g;
+  let idxCount = 0;
+  idx = idx.replace(idxRe, function (_, p1) { idxCount++; return p1 + '?v=' + fingerprint; });
+  fs.writeFileSync(idxPath, idx);
+
+  // 3) sw.js：ASSET_VER 对齐版本；BUILD 换成构建戳（改名即全量刷新 + 触发 SW 自动更新）
+  const swPath = path.join(ROOT, 'sw.js');
+  let sw = fs.readFileSync(swPath, 'utf8');
+  const before = sw;
+  sw = sw.replace(/var ASSET_VER = '[^']*';/, "var ASSET_VER = '" + ver + "';");
+  sw = sw.replace(/var BUILD = '[^']*';/, "var BUILD = '" + stamp + "';");
+  if (sw !== before) fs.writeFileSync(swPath, sw);
+
+  console.log('OK: 版本指纹 ' + fingerprint + ' → index.html ' + idxCount + ' 处引用, sw.js ASSET_VER/BUILD 已同步');
 }
 
 main().catch(function (e) { console.error(e); process.exit(1); });
