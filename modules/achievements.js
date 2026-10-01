@@ -488,6 +488,19 @@ const AUTO_ACHIEVEMENT_DEFS = [
       return (typeof state.birthDate === 'string' && /^\d{4}-01-01$/.test(state.birthDate)) ? 1 : 0;
     },
   },
+  {
+    // v1.0.5：与 Android egg_throwback 对齐——打开「历年今日」回顾卡片即达成。
+    // 触发本身无法从既有数据推导，落 state.eggs.throwbackViewed 计数（主页回顾卡片点击时 +1）。
+    key: 'egg_throwback', title: '时光回溯', category: 'egg', target: 1,
+    desc: '打开过「历年今日」回顾。过去的这一天，你也在认真生活。',
+    current: function () { return (state.eggs && state.eggs.throwbackViewed) || 0; },
+  },
+  {
+    // v1.0.5：与 Android egg_memory_album 对齐——打开「记忆相册」浏览图片收藏即达成。
+    key: 'egg_memory_album', title: '记忆管理员', category: 'egg', target: 1,
+    desc: '翻开了记忆相册。图片会褪色，记录不会。',
+    current: function () { return (state.eggs && state.eggs.albumViewed) || 0; },
+  },
 ];
 
 /* check() 一律由 current() >= target 派生（统一挂载，禁止手写独立判断）；
@@ -582,6 +595,8 @@ function checkAutoAchievements() {
       }
       if (typeof playAchievementChime === 'function') playAchievementChime();
       addActivity('ach', a.title);
+      // v1.0.5：系统通知（Notification API）——成就解锁经事件总线由 app.js 统一消费
+      try { if (typeof EarthBus !== 'undefined' && EarthBus && typeof EarthBus.emit === 'function') EarthBus.emit('eo:system-notify', { title: '🏆 成就解锁', body: a.title }); } catch (e) { /* 静默 */ }
     });
   }
   return newly;

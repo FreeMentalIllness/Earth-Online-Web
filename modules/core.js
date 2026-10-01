@@ -137,8 +137,8 @@ function isValidGender(v) {
 const APP_INFO = {
   name: '地球Online',
   enName: 'Earth Online',
-  version: '1.0.4',
-  buildDate: '2026-09-30',
+  version: '1.0.5',
+  buildDate: '2026-10-01',
   license: 'MIT',
   // 职责分工：二十七 负责数据，Cyou2 负责设计。
   developers: [
@@ -218,6 +218,26 @@ const PRIVACY_POLICY = [
  */
 const CHANGELOG = [
   {
+    version: '1.0.5',
+    date: '2026-10-01',
+    items: [
+      '回收站：任务 / 物品 / 收藏 / 日志删除后保留 30 天，设置页可随时恢复或彻底删除',
+      '批量操作：任务页多选模式，支持批量完成 / 批量删除（走回收站）/ 导出所选',
+      '全局搜索升级：主页搜索覆盖任务 / 物品 / 收藏 / 世界日志 / 成就 / 足迹',
+      '历年今日回顾：主页卡片升级为多年回顾，翻开点亮「时光回溯」彩蛋',
+      '记忆相册：收藏夹图片一目了然，浏览点亮「记忆管理员」彩蛋（Web 彩蛋与三端契约对齐）',
+      '分享人生卡片：Canvas 生成 PNG 长图，连续记录 / 成就 / 足迹一图带走',
+      '键盘快捷键：Alt+N 新建任务、Alt+1~8 切换模块（与 Windows 端同表）',
+      '数据导入增强：支持 CSV 任务清单与 Markdown 日记（历史日期自动归位）',
+      '跨端灵感接力：云端同步后检测其他设备的新灵感，一键转为待办',
+      '系统通知：成就解锁 / 同步完成推送系统级通知（任务到期提醒此前已支持）',
+      '动态问候语：今天的心情 emoji 直接出现在问候里',
+      '连续记录成长：萌芽→传奇七阶段，主页徽章显示距下一阶段天数',
+      '完成任务庆祝连击：3 秒内连续完成，反馈文案逐级渐强',
+      '数据契约补齐：收藏文件元数据导出为 fileMetaJson + fileUri，与 Android wire 形态对齐',
+    ],
+  },
+  {
     version: '1.0.4',
     date: '2026-09-30',
     items: [
@@ -227,6 +247,8 @@ const CHANGELOG = [
       '数据页视图切换升级为分段 Tab，切换后保持滚动位置',
       '地图增量刷新增加异常兜底，保存坐标更稳',
       '深色模式配色与 Android / Windows 三端统一，实心琥珀按钮文字对比度达 WCAG AA',
+      'PWA 缓存根治：Service Worker 网络优先 + 版本指纹自动注入，普通刷新即最新版',
+      '深色模式默认跟随系统偏好，手动选择仍然优先',
     ],
   },
   {
@@ -638,6 +660,9 @@ function greetingBuild(hour, latestMoodText, streakDays) {
   const parts = [base];
   const moodLine = greetingMoodCareLine(latestMoodText);
   if (moodLine) parts.push(moodLine);
+  // v1.0.5：心情是纯 emoji（不含中英文与数字）时直接展示（如「🥳」），让问候带今天的情绪温度
+  const moodRaw = String(latestMoodText || '').trim();
+  if (moodRaw && moodRaw.length <= 8 && !/[a-zA-Z0-9\u4e00-\u9fff]/.test(moodRaw)) parts.push(moodRaw);
   const d = Number(streakDays) || 0;
   if (d >= 3) parts.push('已连续记录 ' + d + ' 天 🔥');
   return parts.join(' · ');
@@ -786,6 +811,7 @@ function defaultState() {
     profile: defaultProfile(), // v2 新增
     collections: [],           // v2 新增
     activities: [],            // v3 新增：最近动态 feed
+    trash: [],                 // v1.0.5：回收站（删除暂存 30 天，可恢复；元素经 sanitizeState 校验）
     locations: [],             // v10：足迹地图（经纬度标记）
     ledgerOpened: false,       // v5：是否已打开过记账（Verifin），用于「精打细算」成就
     // 背包自定义分类（v15）：新档为空 []，不预置任何默认分类，由用户在「分类管理」中自建；
@@ -802,12 +828,12 @@ function defaultState() {
     },
     // v1.2.0：彩蛋计数器（整数桶）。只放「无法从既有数据推导」的事件计数，
     // 能从 tasks/memos/... 推导的彩蛋一律实时算，不入档（避免冗余状态）。
-    eggs: { blankTitleTries: 0 },
+    eggs: sanitizeEggs(null), // v1.0.5：种子也走白名单清洗，保证 defaultState 与 sanitizeState 输出形态一致（save→load 幂等）
   };
 }
 
 /** 允许持久化的彩蛋计数器键（sanitizeEggs 白名单，新增键必须登记） */
-const EGG_COUNTERS = ['blankTitleTries'];
+const EGG_COUNTERS = ['blankTitleTries', 'throwbackViewed', 'albumViewed'];
 
 /**
  * 彩蛋计数器自增（v1.2.0）。
@@ -973,6 +999,7 @@ function loadState() {
     }
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tasks)) {
       state = sanitizeState(parsed);
+      try { purgeExpiredTrash(); } catch (e) { /* 过期清理失败不阻断启动 */ }
       return state;
     }
   }
@@ -1206,6 +1233,29 @@ function sanitizeState(raw) {
 
   // v1.2.0：彩蛋计数桶（非负整数，缺失 → 0；畸形一律归零，绝不沿用垃圾值）
   result.eggs = sanitizeEggs(raw && raw.eggs);
+
+  // v1.0.5：回收站清洗——逐条校验元素结构（同六处 filter(Boolean) 纪律），畸形条目剔除
+  result.trash = (Array.isArray(raw.trash) ? raw.trash : []).map(function (tr) {
+    if (!tr || typeof tr !== 'object') return null;
+    const kind = TRASH_KINDS[tr.kind] ? tr.kind : null;
+    if (!kind) return null;
+    const items = (Array.isArray(tr.items) ? tr.items : []).filter(function (x) {
+      return x && typeof x === 'object' && x.id;
+    });
+    if (!items.length) return null;
+    const del = isIsoTimeString(tr.deletedAt) ? tr.deletedAt : new Date().toISOString();
+    const exp = isIsoTimeString(tr.expiresAt)
+      ? tr.expiresAt
+      : new Date(new Date(del).getTime() + TRASH_TTL_DAYS * 86400000).toISOString();
+    return {
+      id: String(tr.id || uid('tr')),
+      kind: kind,
+      title: String(tr.title || '').slice(0, 200),
+      items: items,
+      deletedAt: del,
+      expiresAt: exp,
+    };
+  }).filter(Boolean);
 
   return result;
 }
@@ -2100,7 +2150,227 @@ function deleteLocation(id) {
   return true;
 }
 
+/* ==================== v1.0.5：回收站 ====================
+ * 删除暂存 30 天可恢复；批量删除同样走回收站。
+ * 存档形态：state.trash = [{id, kind, title, items[], deletedAt, expiresAt}]
+ * - items 是被删实体的完整快照（恢复时按 kind 回插原数组，保留原 id/createdAt）。
+ * - 跨端同步：trash 顶层字段随存档走 WebDAV（sanitizeState 清洗 + 按字段覆盖），
+ *   不参与 Android 实体映射（Android ignoreUnknownKeys 忽略），不触碰合并语义。
+ */
+
+/** 回收站支持的数据种类（sanitizeState 白名单 + 恢复路由共用） */
+const TRASH_KINDS = { task: 1, item: 1, collection: 1, memo: 1, location: 1 };
+
+/** 回收站保留天数 */
+const TRASH_TTL_DAYS = 30;
+
+/** kind → 显示名（UI 徽章用） */
+function trashKindLabel(kind) {
+  return { task: '任务', item: '物品', collection: '收藏', memo: '日志', location: '足迹' }[kind] || kind;
+}
+
+/** kind → 实体数组引用（getter，避免直接暴露数组别名导致 filter 后引用失效） */
+function trashSourceArray(kind) {
+  const s = state || {};
+  switch (kind) {
+    case 'task': return s.tasks;
+    case 'item': return s.items;
+    case 'collection': return s.collections;
+    case 'memo': return s.memos;
+    case 'location': return s.locations;
+    default: return null;
+  }
+}
+
+/** 摘要显示文本（回收站列表用） */
+function trashEntityTitle(kind, ent) {
+  if (!ent) return '(未命名)';
+  return String(ent.title || ent.name || ent.text || ent.label || '(未命名)').slice(0, 120);
+}
+
+/**
+ * 软删除：把实体（task 级联整棵子树）移入回收站。
+ * @returns {object|null} 回收站条目；kind 非法或实体不存在返回 null
+ */
+function softDeleteToTrash(kind, id) {
+  if (!TRASH_KINDS[kind]) return null;
+  const arr = trashSourceArray(kind);
+  if (!Array.isArray(arr)) return null;
+  const victims = (kind === 'task')
+    ? [id].concat(getDescendantIds(id)).map(function (tid) { return arr.find(function (t) { return t.id === tid; }); }).filter(Boolean)
+    : arr.filter(function (x) { return x && x.id === id; });
+  if (!victims.length) return null;
+  const now = new Date().toISOString();
+  const entry = {
+    id: uid('tr'),
+    kind: kind,
+    title: trashEntityTitle(kind, victims[0]) + (victims.length > 1 ? ' 等 ' + victims.length + ' 项' : ''),
+    items: victims.map(function (v) { return JSON.parse(JSON.stringify(v)); }),
+    deletedAt: now,
+    expiresAt: new Date(new Date(now).getTime() + TRASH_TTL_DAYS * 86400000).toISOString(),
+  };
+  const victimIds = new Set(victims.map(function (v) { return v.id; }));
+  state[kind === 'task' ? 'tasks' : kind === 'item' ? 'items' : kind === 'collection' ? 'collections' : kind === 'memo' ? 'memos' : 'locations'] =
+    arr.filter(function (x) { return !(x && victimIds.has(x.id)); });
+  state.trash.unshift(entry); // 新删的排前面
+  saveState();
+  return entry;
+}
+
+/**
+ * 从回收站恢复一条记录（整组恢复，保留原 id）。
+ * @returns {{ok:boolean, reason?:string}} 主键冲突时不恢复（本地已有同 id 实体）
+ */
+function restoreFromTrash(trashId) {
+  const idx = (state.trash || []).findIndex(function (t) { return t && t.id === trashId; });
+  if (idx === -1) return { ok: false, reason: '该记录已不在回收站' };
+  const entry = state.trash[idx];
+  const arr = trashSourceArray(entry.kind);
+  if (!Array.isArray(arr)) return { ok: false, reason: '未知的数据类型' };
+  const existing = new Set(arr.map(function (x) { return x && x.id; }));
+  for (let i = 0; i < entry.items.length; i++) {
+    if (existing.has(entry.items[i].id)) return { ok: false, reason: '本地已存在同 ID 数据，无法恢复（冲突时云端优先保留现状）' };
+  }
+  entry.items.forEach(function (snap) { arr.push(JSON.parse(JSON.stringify(snap))); });
+  state.trash.splice(idx, 1);
+  saveState();
+  if (typeof checkAutoAchievements === 'function') checkAutoAchievements();
+  return { ok: true };
+}
+
+/** 彻底删除一条回收站记录（不恢复、不可逆） */
+function purgeTrashEntry(trashId) {
+  const before = (state.trash || []).length;
+  state.trash = (state.trash || []).filter(function (t) { return !t || t.id !== trashId; });
+  if (state.trash.length === before) return false;
+  saveState();
+  return true;
+}
+
+/** 清空回收站（彻底删除全部） */
+function emptyTrash() {
+  const n = (state.trash || []).length;
+  state.trash = [];
+  saveState();
+  return n;
+}
+
+/** 清理过期回收站记录（loadState 时调用；有清理才落盘） */
+function purgeExpiredTrash() {
+  if (!Array.isArray(state.trash) || !state.trash.length) return 0;
+  const now = Date.now();
+  const keep = state.trash.filter(function (t) {
+    return t && isIsoTimeString(t.expiresAt) && new Date(t.expiresAt).getTime() > now;
+  });
+  if (keep.length === state.trash.length) return 0;
+  const purged = state.trash.length - keep.length;
+  state.trash = keep;
+  saveState();
+  return purged;
+}
+
+/* ==================== v1.0.5：连续记录成长阶段 ====================
+ * 阶段表与 Windows 端同构（萌芽→…→传奇）；阶段由 streak 派生，不持久化。
+ */
+const GROWTH_STAGES = [
+  { min: 1, label: '萌芽', emoji: '🌱' },
+  { min: 3, label: '破土', emoji: '🌿' },
+  { min: 7, label: '成长', emoji: '🍃' },
+  { min: 14, label: '繁茂', emoji: '🍀' },
+  { min: 30, label: '根深', emoji: '🌳' },
+  { min: 60, label: '参天', emoji: '🌲' },
+  { min: 100, label: '传奇', emoji: '🌌' },
+];
+
+/**
+ * 连续记录成长阶段。
+ * @returns {{stage:string, emoji:string, min:number, nextLabel:string|null, daysToNext:number}}
+ */
+function growthStageOf(streakDays) {
+  const d = Math.max(0, Number(streakDays) || 0);
+  let cur = null;
+  for (let i = 0; i < GROWTH_STAGES.length; i++) {
+    if (d >= GROWTH_STAGES[i].min) cur = GROWTH_STAGES[i];
+  }
+  if (!cur) return { stage: '未开始', emoji: '即', min: 0, nextLabel: '萌芽', daysToNext: 1 };
+  const idx = GROWTH_STAGES.indexOf(cur);
+  const next = GROWTH_STAGES[idx + 1] || null;
+  return {
+    stage: cur.label,
+    emoji: cur.emoji,
+    min: cur.min,
+    nextLabel: next ? next.label : null,
+    daysToNext: next ? Math.max(0, next.min - d) : 0,
+  };
+}
+
+/* ==================== v1.0.5：历年今日回顾 ====================
+ * 从世界日志（memos）/ 动态（activities）/ 任务完成（doneAt）中抽取往年同月同日的记忆。
+ * 只做内存派生（不持久化），供主页回顾卡片消费。
+ */
+
+/** 日期值 → {y, m, d}（本地时区）；非法返回 null */
+function _localDatePartsOf(v) {
+  if (!v) return null;
+  const dt = new Date(v);
+  if (isNaN(dt.getTime())) return null;
+  return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
+}
+
+/**
+ * 历年今日记忆（不含今年），按年份分组降序，最多回溯 3 个年份、每年最多 4 条。
+ * @returns {Array<{year:number, items:Array<{icon:string,text:string,time:string}>}>}
+ */
+function onThisDayMemories(st) {
+  const s = st || state || {};
+  const now = new Date();
+  const cm = now.getMonth() + 1, cd = now.getDate(), cy = now.getFullYear();
+  const out = {};
+  const push = function (year, icon, text, time) {
+    if (!year || year >= cy) return;                 // 只看往年
+    if (!out[year]) out[year] = [];
+    if (out[year].length >= 4) return;
+    out[year].push({ icon: icon, text: String(text || '').slice(0, 80), time: String(time || '') });
+  };
+  (Array.isArray(s.memos) ? s.memos : []).forEach(function (m) {
+    if (!m) return;
+    const p = _localDatePartsOf(m.createdAt);
+    if (p && p.m === cm && p.d === cd) push(p.y, '📝', m.text, p.y);
+  });
+  (Array.isArray(s.activities) ? s.activities : []).forEach(function (a) {
+    if (!a) return;
+    const p = _localDatePartsOf(a.createdAt || a.at);
+    if (p && p.m === cm && p.d === cd) push(p.y, a.kind === 'ach' ? '🏆' : '✅', a.title, p.y);
+  });
+  (Array.isArray(s.tasks) ? s.tasks : []).forEach(function (t) {
+    if (!t || t.status !== 'done') return;
+    const p = _localDatePartsOf(t.doneAt);
+    if (p && p.m === cm && p.d === cd) push(p.y, '✅', t.title, p.y);
+  });
+  return Object.keys(out)
+    .map(function (y) { return { year: Number(y), items: out[y] }; })
+    .sort(function (a, b) { return b.year - a.year; })
+    .slice(0, 3);
+}
+
+
   /* ---- 导出公共 API 到 EO 命名空间并同步到全局（兼容旧引用 / 测试桩） ---- */
+  E.TRASH_KINDS = TRASH_KINDS;
+  E.TRASH_TTL_DAYS = TRASH_TTL_DAYS;
+  E.trashKindLabel = trashKindLabel;
+  E.softDeleteToTrash = softDeleteToTrash;
+  E.restoreFromTrash = restoreFromTrash;
+  E.purgeTrashEntry = purgeTrashEntry;
+  E.emptyTrash = emptyTrash;
+  E.purgeExpiredTrash = purgeExpiredTrash;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.softDeleteToTrash === "undefined") globalThis.softDeleteToTrash = softDeleteToTrash; } catch (e) {}
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.restoreFromTrash === "undefined") globalThis.restoreFromTrash = restoreFromTrash; } catch (e) {}
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.trashKindLabel === "undefined") globalThis.trashKindLabel = trashKindLabel; } catch (e) {}
+  E.GROWTH_STAGES = GROWTH_STAGES;
+  E.growthStageOf = growthStageOf;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.growthStageOf === "undefined") globalThis.growthStageOf = growthStageOf; } catch (e) {}
+  E.onThisDayMemories = onThisDayMemories;
+  try { if (typeof globalThis !== "undefined" && typeof globalThis.onThisDayMemories === "undefined") globalThis.onThisDayMemories = onThisDayMemories; } catch (e) {}
   E.STORAGE_PREFIX = STORAGE_PREFIX;
   try { if (typeof globalThis !== "undefined" && typeof globalThis.STORAGE_PREFIX === "undefined") globalThis.STORAGE_PREFIX = STORAGE_PREFIX; } catch (e) {}
   E.STORAGE_KEY = STORAGE_KEY;

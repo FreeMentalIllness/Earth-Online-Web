@@ -2630,3 +2630,122 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
   cursor: pointer;
 }
 #updateBar:hover { filter: brightness(1.03); }
+
+/* ==================== v1.0.5：批量操作 / 回收站 / 记忆相册 / 灵感横幅 ==================== */
+
+/* 批量操作条（任务页） */
+.batch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.batch-bar .batch-count {
+  font-weight: 600;
+  color: var(--sem-main-deep);
+  margin-right: auto;
+}
+.batch-bar .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.task-node.batching .task-actions { display: none; }
+.batch-check { width: 16px; height: 16px; accent-color: var(--amber); cursor: pointer; flex: none; }
+
+/* 回收站（设置页） */
+.trash-card .trash-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.trash-card .trash-row:last-of-type { border-bottom: none; }
+.trash-card .trash-title {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.trash-card .trash-days { flex: none; font-size: 12px; }
+
+/* 记忆相册 */
+.album-box { max-width: 560px; }
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+.album-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel);
+}
+.album-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+.album-img-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  aspect-ratio: 1 / 1;
+  background: var(--bg-sunk);
+  font-size: 22px;
+}
+.album-cap {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 跨端灵感接力横幅（样式对齐 #updateBar，配色走 var()） */
+.ideas-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px;
+  background: var(--amber);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+}
+.ideas-banner .ib-btn {
+  flex: none;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  background: var(--panel);
+  color: var(--amber-deep);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ideas-banner .ib-btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.6); }
+@media (max-width: 600px) {
+  .ideas-banner { bottom: 76px; } /* 避开移动端底部 Tab */
+}

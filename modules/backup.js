@@ -134,7 +134,22 @@ function buildWebdavPayload() {
     memos: s.memos || [],
     items: s.items || [],
     achievements: s.achievements || [],
-    collections: s.collections || [],
+    collections: (s.collections || []).map(function (c) {
+      // v1.0.5：契约补齐——Android 侧 wire 形态为 fileMetaJson（JSON 字符串）+ fileUri；
+      // Web 内部用 fileMeta 对象，导出时映射；fileUri 用稳定伪 URI 标记来源（Web 不持久化二进制）。
+      if (!c || typeof c !== 'object') return c;
+      let out = c;
+      try { out = JSON.parse(JSON.stringify(c)); } catch (e) { return c; }
+      if (c.fileMeta && typeof c.fileMeta === 'object') {
+        out.fileMetaJson = JSON.stringify({
+          name: String(c.fileMeta.name || ''),
+          mime: String(c.fileMeta.mime || ''),
+          size: Number(c.fileMeta.size) || 0,
+        });
+        if (!out.fileUri) out.fileUri = 'web://collection/' + encodeURIComponent(String(c.id || ''));
+      }
+      return out;
+    }),
     locations: (s.locations || []).map(function (l) {
       if (!l || typeof l !== 'object') return l;
       let out = {};
@@ -214,9 +229,29 @@ function collectExtraStorage() {
  */
 function extractBackupState(obj) {
   if (!obj || typeof obj !== 'object') return null;
-  if (obj.format === BACKUP_FORMAT && obj.state && Array.isArray(obj.state.tasks)) return obj.state;
-  if (Array.isArray(obj.tasks)) return obj;
-  return null;
+  let st = null;
+  if (obj.format === BACKUP_FORMAT && obj.state && Array.isArray(obj.state.tasks)) st = obj.state;
+  else if (Array.isArray(obj.tasks)) st = obj;
+  if (st) normalizeIncomingCollections(st);
+  return st;
+}
+
+/** v1.0.5：导入侧契约补齐——Android 导出的 collections 带 fileMetaJson（字符串）/fileUri，
+ * Web 内部用 fileMeta 对象。fileMeta 缺失而 fileMetaJson 存在时解析回填；畸形 JSON 静默忽略（元数据视为缺失）。 */
+function normalizeIncomingCollections(st) {
+  const arr = st && st.collections;
+  if (!Array.isArray(arr)) return;
+  arr.forEach(function (c) {
+    if (!c || typeof c !== 'object') return;
+    if (!c.fileMeta && typeof c.fileMetaJson === 'string' && c.fileMetaJson) {
+      try {
+        const m = JSON.parse(c.fileMetaJson);
+        if (m && typeof m === 'object') {
+          c.fileMeta = { name: String(m.name || ''), mime: String(m.mime || ''), size: Number(m.size) || 0 };
+        }
+      } catch (e) { /* 畸形 JSON 忽略 */ }
+    }
+  });
 }
 
 /**

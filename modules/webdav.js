@@ -475,6 +475,14 @@ function webdavRestoreBackup(btn) {
     }
     if (typeof openConfirm !== 'function') return;
     openConfirm('导入会与当前数据按主键合并（同一条数据以备份为准，本地新增的保留；导入前会自动留一份快照），确定继续？', function () {
+      // v1.0.5 跨端灵感接力：恢复前记录本地「灵感(idea)」id 集，恢复后对比云端新增 → 横幅转待办
+      const preIdeaIds = {};
+      try {
+        const localIdeas = ((typeof EOStore !== 'undefined' && EOStore && EOStore.getSync)
+          ? EOStore.getSync('earth_data') : null);
+        const lm = (localIdeas && Array.isArray(localIdeas.memos)) ? localIdeas.memos : [];
+        lm.forEach(function (m) { if (m && m.type === 'idea') preIdeaIds[String(m.id)] = 1; });
+      } catch (e) { /* 读取失败视为全部新增，宁多勿漏 */ }
       let res2 = null;
       try {
         res2 = applyBackupPayload(obj);
@@ -486,7 +494,20 @@ function webdavRestoreBackup(btn) {
         if (typeof toast === 'function') toast((res2 && res2.error) || '恢复失败，当前数据未改动');
         return;
       }
+      // 灵感接力：云端比本地多的 idea 日志 → 存 sessionStorage，刷新后横幅一键转待办
+      try {
+        const cloudIdeas = ((obj && obj.state && Array.isArray(obj.state.memos)) ? obj.state.memos : [])
+          .filter(function (m) { return m && m.type === 'idea' && m.text; });
+        const fresh = cloudIdeas.filter(function (m) { return !preIdeaIds[String(m.id)]; });
+        if (fresh.length) {
+          sessionStorage.setItem('eo_new_ideas', JSON.stringify(fresh.slice(0, 10).map(function (m) {
+            return { id: String(m.id || ''), text: String(m.text || '').slice(0, 120) };
+          })));
+        }
+      } catch (e2) { /* 接力失败不阻断恢复 */ }
       if (typeof toast === 'function') toast('已从云端恢复，即将刷新');
+      // v1.0.5：同步完成系统通知（经事件总线，app.js 统一消费）
+      try { if (typeof EarthBus !== 'undefined' && EarthBus && typeof EarthBus.emit === 'function') EarthBus.emit('eo:system-notify', { title: '☁️ 同步完成', body: '已从云端恢复备份' }); } catch (e3) { /* 静默 */ }
       if (typeof setTimeout === 'function') {
         setTimeout(function () {
           try { location.reload(); } catch (e) { /* 测试环境 reload 会 throw，忽略 */ }

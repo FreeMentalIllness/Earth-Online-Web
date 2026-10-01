@@ -323,11 +323,20 @@ function openCollectionDetail(id) {
 function confirmDeleteCollection(id) {
   const entry = getCollectionById(id);
   if (!entry) return;
-  openConfirm('确定删除收藏「' + entry.title + '」吗？附件将一并释放。', function () {
-    deleteCollection(id); // 内部先 detachCollectionFile（revoke blob）再移除
-    checkAutoAchievements();
-    renderBackpack();
-    toast('收藏已删除');
+  openConfirm('确定删除收藏「' + entry.title + '」吗？内容将移入回收站（30 天内可恢复）。', function () {
+    // v1.0.5：删除统一走回收站；会话内活跃 blob 仍需显式 revoke，避免内存泄漏
+    if (typeof softDeleteToTrash === 'function' && softDeleteToTrash('collection', id)) {
+      try { if (typeof detachCollectionFile === 'function') detachCollectionFile(id); } catch (e) { /* 忽略 */ }
+      checkAutoAchievements();
+      renderBackpack();
+      toast('已移入回收站，30 天内可恢复');
+    } else {
+      // 兜底：回收站不可用时退回原硬删除路径（语义不变）
+      deleteCollection(id);
+      checkAutoAchievements();
+      renderBackpack();
+      toast('收藏已删除');
+    }
   });
 }
 

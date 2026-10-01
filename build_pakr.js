@@ -81,6 +81,7 @@ async function main() {
     '<div id="auth-root"></div>\n' +
     '<div id="modal-root"></div>\n' +
     '<input type="file" id="backupFileInput" accept="application/json,.json" hidden>\n' +
+    '<input type="file" id="dataFileInput" accept=".csv,.md,.markdown,.txt" hidden>\n' +
     // v8/v9：收藏附件选择框。此前 Pakr 模板漏了这个隐藏 input，导致「选择文件」按钮点了没反应
     '<input type="file" id="collectionFileInput" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.exe,.apk,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/zip,application/octet-stream" hidden>\n' +
     // v15：此前模板里 #tabbar 是空节点，导致 ES5 包首页没有底部 Tab。

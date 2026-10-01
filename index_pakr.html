@@ -2642,6 +2642,125 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 }
 #updateBar:hover { filter: brightness(1.03); }
 
+/* ==================== v1.0.5：批量操作 / 回收站 / 记忆相册 / 灵感横幅 ==================== */
+
+/* 批量操作条（任务页） */
+.batch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.batch-bar .batch-count {
+  font-weight: 600;
+  color: var(--sem-main-deep);
+  margin-right: auto;
+}
+.batch-bar .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.task-node.batching .task-actions { display: none; }
+.batch-check { width: 16px; height: 16px; accent-color: var(--amber); cursor: pointer; flex: none; }
+
+/* 回收站（设置页） */
+.trash-card .trash-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.trash-card .trash-row:last-of-type { border-bottom: none; }
+.trash-card .trash-title {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.trash-card .trash-days { flex: none; font-size: 12px; }
+
+/* 记忆相册 */
+.album-box { max-width: 560px; }
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+.album-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel);
+}
+.album-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+.album-img-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  aspect-ratio: 1 / 1;
+  background: var(--bg-sunk);
+  font-size: 22px;
+}
+.album-cap {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 跨端灵感接力横幅（样式对齐 #updateBar，配色走 var()） */
+.ideas-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px;
+  background: var(--amber);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+}
+.ideas-banner .ib-btn {
+  flex: none;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  background: var(--panel);
+  color: var(--amber-deep);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ideas-banner .ib-btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.6); }
+@media (max-width: 600px) {
+  .ideas-banner { bottom: 76px; } /* 避开移动端底部 Tab */
+}
+
 </style>
 <script>window._AMapSecurityConfig = { securityJsCode: "d4e92781da1ca5996c246d315af66031" };</script>
 <script src="https://webapi.amap.com/maps?v=2.0&key=07672883965ec7a6f0948813c0a90915"></script>
@@ -2658,6 +2777,7 @@ html[data-font-scale="xl"] #content { zoom: 1.2; }
 <div id="auth-root"></div>
 <div id="modal-root"></div>
 <input type="file" id="backupFileInput" accept="application/json,.json" hidden>
+<input type="file" id="dataFileInput" accept=".csv,.md,.markdown,.txt" hidden>
 <input type="file" id="collectionFileInput" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.exe,.apk,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/zip,application/octet-stream" hidden>
 <nav id="tabbar" class="tabbar" aria-label="移动端导航"><div class="tab-item active" data-page="home"><span class="tab-item-icon">🏠</span><span class="tab-item-label">主页</span><i class="tab-dot" aria-hidden="true"></i></div><div class="tab-item" data-page="tasks"><span class="tab-item-icon">📋</span><span class="tab-item-label">任务</span><i class="tab-dot" aria-hidden="true"></i></div><div class="tab-item" data-page="backpack"><span class="tab-item-icon">🎒</span><span class="tab-item-label">背包</span><i class="tab-dot" aria-hidden="true"></i></div><div class="tab-item" data-page="ai"><span class="tab-item-icon">🤖</span><span class="tab-item-label">系统</span><i class="tab-dot" aria-hidden="true"></i></div></nav>
 <div id="tabMoreSheet" class="tab-sheet"></div>
@@ -4674,8 +4794,8 @@ var backpackTab = 'all';
   var APP_INFO = {
     name: '地球Online',
     enName: 'Earth Online',
-    version: '1.0.4',
-    buildDate: '2026-09-30',
+    version: '1.0.5',
+    buildDate: '2026-10-01',
     license: 'MIT',
     // 职责分工：二十七 负责数据，Cyou2 负责设计。
     developers: [{
@@ -4739,9 +4859,13 @@ var backpackTab = 'all';
    * 0.9.x 预览版，历史保留但不占正式版本号。
    */
   var CHANGELOG = [{
+    version: '1.0.5',
+    date: '2026-10-01',
+    items: ['回收站：任务 / 物品 / 收藏 / 日志删除后保留 30 天，设置页可随时恢复或彻底删除', '批量操作：任务页多选模式，支持批量完成 / 批量删除（走回收站）/ 导出所选', '全局搜索升级：主页搜索覆盖任务 / 物品 / 收藏 / 世界日志 / 成就 / 足迹', '历年今日回顾：主页卡片升级为多年回顾，翻开点亮「时光回溯」彩蛋', '记忆相册：收藏夹图片一目了然，浏览点亮「记忆管理员」彩蛋（Web 彩蛋与三端契约对齐）', '分享人生卡片：Canvas 生成 PNG 长图，连续记录 / 成就 / 足迹一图带走', '键盘快捷键：Alt+N 新建任务、Alt+1~8 切换模块（与 Windows 端同表）', '数据导入增强：支持 CSV 任务清单与 Markdown 日记（历史日期自动归位）', '跨端灵感接力：云端同步后检测其他设备的新灵感，一键转为待办', '系统通知：成就解锁 / 同步完成推送系统级通知（任务到期提醒此前已支持）', '动态问候语：今天的心情 emoji 直接出现在问候里', '连续记录成长：萌芽→传奇七阶段，主页徽章显示距下一阶段天数', '完成任务庆祝连击：3 秒内连续完成，反馈文案逐级渐强', '数据契约补齐：收藏文件元数据导出为 fileMetaJson + fileUri，与 Android wire 形态对齐']
+  }, {
     version: '1.0.4',
     date: '2026-09-30',
-    items: ['收藏卡与物品卡同构：收藏夹条目复用物品卡样式与操作，视觉交互一致', '空状态统一为大引导卡（插画 + 说明 + 直达按钮），任务/背包/收藏口径一致', '隐私政策与更新说明弹窗加宽，去除横向滚动', '数据页视图切换升级为分段 Tab，切换后保持滚动位置', '地图增量刷新增加异常兜底，保存坐标更稳', '深色模式配色与 Android / Windows 三端统一，实心琥珀按钮文字对比度达 WCAG AA']
+    items: ['收藏卡与物品卡同构：收藏夹条目复用物品卡样式与操作，视觉交互一致', '空状态统一为大引导卡（插画 + 说明 + 直达按钮），任务/背包/收藏口径一致', '隐私政策与更新说明弹窗加宽，去除横向滚动', '数据页视图切换升级为分段 Tab，切换后保持滚动位置', '地图增量刷新增加异常兜底，保存坐标更稳', '深色模式配色与 Android / Windows 三端统一，实心琥珀按钮文字对比度达 WCAG AA', 'PWA 缓存根治：Service Worker 网络优先 + 版本指纹自动注入，普通刷新即最新版', '深色模式默认跟随系统偏好，手动选择仍然优先']
   }, {
     version: '1.0.3',
     date: '2026-09-29',
@@ -5141,6 +5265,9 @@ var backpackTab = 'all';
     var parts = [base];
     var moodLine = greetingMoodCareLine(latestMoodText);
     if (moodLine) parts.push(moodLine);
+    // v1.0.5：心情是纯 emoji（不含中英文与数字）时直接展示（如「🥳」），让问候带今天的情绪温度
+    var moodRaw = String(latestMoodText || '').trim();
+    if (moodRaw && moodRaw.length <= 8 && !/[a-zA-Z0-9\u4e00-\u9fff]/.test(moodRaw)) parts.push(moodRaw);
     var d = Number(streakDays) || 0;
     if (d >= 3) parts.push('已连续记录 ' + d + ' 天 🔥');
     return parts.join(' · ');
@@ -5319,6 +5446,8 @@ var backpackTab = 'all';
       // v2 新增
       activities: [],
       // v3 新增：最近动态 feed
+      trash: [],
+      // v1.0.5：回收站（删除暂存 30 天，可恢复；元素经 sanitizeState 校验）
       locations: [],
       // v10：足迹地图（经纬度标记）
       ledgerOpened: false,
@@ -5346,7 +5475,7 @@ var backpackTab = 'all';
   }
 
   /** 允许持久化的彩蛋计数器键（sanitizeEggs 白名单，新增键必须登记） */
-  var EGG_COUNTERS = ['blankTitleTries'];
+  var EGG_COUNTERS = ['blankTitleTries', 'throwbackViewed', 'albumViewed'];
 
   /**
    * 彩蛋计数器自增（v1.2.0）。
@@ -5542,6 +5671,9 @@ var backpackTab = 'all';
       }
       if (parsed && _typeof(parsed) === 'object' && Array.isArray(parsed.tasks)) {
         state = sanitizeState(parsed);
+        try {
+          purgeExpiredTrash();
+        } catch (e) {/* 过期清理失败不阻断启动 */}
         return state;
       }
     }
@@ -5779,6 +5911,27 @@ var backpackTab = 'all';
 
     // v1.2.0：彩蛋计数桶（非负整数，缺失 → 0；畸形一律归零，绝不沿用垃圾值）
     result.eggs = sanitizeEggs(raw && raw.eggs);
+
+    // v1.0.5：回收站清洗——逐条校验元素结构（同六处 filter(Boolean) 纪律），畸形条目剔除
+    result.trash = (Array.isArray(raw.trash) ? raw.trash : []).map(function (tr) {
+      if (!tr || _typeof(tr) !== 'object') return null;
+      var kind = TRASH_KINDS[tr.kind] ? tr.kind : null;
+      if (!kind) return null;
+      var items = (Array.isArray(tr.items) ? tr.items : []).filter(function (x) {
+        return x && _typeof(x) === 'object' && x.id;
+      });
+      if (!items.length) return null;
+      var del = isIsoTimeString(tr.deletedAt) ? tr.deletedAt : new Date().toISOString();
+      var exp = isIsoTimeString(tr.expiresAt) ? tr.expiresAt : new Date(new Date(del).getTime() + TRASH_TTL_DAYS * 86400000).toISOString();
+      return {
+        id: String(tr.id || uid('tr')),
+        kind: kind,
+        title: String(tr.title || '').slice(0, 200),
+        items: items,
+        deletedAt: del,
+        expiresAt: exp
+      };
+    }).filter(Boolean);
     return result;
   }
 
@@ -6877,7 +7030,322 @@ var backpackTab = 'all';
     return true;
   }
 
+  /* ==================== v1.0.5：回收站 ====================
+   * 删除暂存 30 天可恢复；批量删除同样走回收站。
+   * 存档形态：state.trash = [{id, kind, title, items[], deletedAt, expiresAt}]
+   * - items 是被删实体的完整快照（恢复时按 kind 回插原数组，保留原 id/createdAt）。
+   * - 跨端同步：trash 顶层字段随存档走 WebDAV（sanitizeState 清洗 + 按字段覆盖），
+   *   不参与 Android 实体映射（Android ignoreUnknownKeys 忽略），不触碰合并语义。
+   */
+
+  /** 回收站支持的数据种类（sanitizeState 白名单 + 恢复路由共用） */
+  var TRASH_KINDS = {
+    task: 1,
+    item: 1,
+    collection: 1,
+    memo: 1,
+    location: 1
+  };
+
+  /** 回收站保留天数 */
+  var TRASH_TTL_DAYS = 30;
+
+  /** kind → 显示名（UI 徽章用） */
+  function trashKindLabel(kind) {
+    return {
+      task: '任务',
+      item: '物品',
+      collection: '收藏',
+      memo: '日志',
+      location: '足迹'
+    }[kind] || kind;
+  }
+
+  /** kind → 实体数组引用（getter，避免直接暴露数组别名导致 filter 后引用失效） */
+  function trashSourceArray(kind) {
+    var s = state || {};
+    switch (kind) {
+      case 'task':
+        return s.tasks;
+      case 'item':
+        return s.items;
+      case 'collection':
+        return s.collections;
+      case 'memo':
+        return s.memos;
+      case 'location':
+        return s.locations;
+      default:
+        return null;
+    }
+  }
+
+  /** 摘要显示文本（回收站列表用） */
+  function trashEntityTitle(kind, ent) {
+    if (!ent) return '(未命名)';
+    return String(ent.title || ent.name || ent.text || ent.label || '(未命名)').slice(0, 120);
+  }
+
+  /**
+   * 软删除：把实体（task 级联整棵子树）移入回收站。
+   * @returns {object|null} 回收站条目；kind 非法或实体不存在返回 null
+   */
+  function softDeleteToTrash(kind, id) {
+    if (!TRASH_KINDS[kind]) return null;
+    var arr = trashSourceArray(kind);
+    if (!Array.isArray(arr)) return null;
+    var victims = kind === 'task' ? [id].concat(getDescendantIds(id)).map(function (tid) {
+      return arr.find(function (t) {
+        return t.id === tid;
+      });
+    }).filter(Boolean) : arr.filter(function (x) {
+      return x && x.id === id;
+    });
+    if (!victims.length) return null;
+    var now = new Date().toISOString();
+    var entry = {
+      id: uid('tr'),
+      kind: kind,
+      title: trashEntityTitle(kind, victims[0]) + (victims.length > 1 ? ' 等 ' + victims.length + ' 项' : ''),
+      items: victims.map(function (v) {
+        return JSON.parse(JSON.stringify(v));
+      }),
+      deletedAt: now,
+      expiresAt: new Date(new Date(now).getTime() + TRASH_TTL_DAYS * 86400000).toISOString()
+    };
+    var victimIds = new Set(victims.map(function (v) {
+      return v.id;
+    }));
+    state[kind === 'task' ? 'tasks' : kind === 'item' ? 'items' : kind === 'collection' ? 'collections' : kind === 'memo' ? 'memos' : 'locations'] = arr.filter(function (x) {
+      return !(x && victimIds.has(x.id));
+    });
+    state.trash.unshift(entry); // 新删的排前面
+    saveState();
+    return entry;
+  }
+
+  /**
+   * 从回收站恢复一条记录（整组恢复，保留原 id）。
+   * @returns {{ok:boolean, reason?:string}} 主键冲突时不恢复（本地已有同 id 实体）
+   */
+  function restoreFromTrash(trashId) {
+    var idx = (state.trash || []).findIndex(function (t) {
+      return t && t.id === trashId;
+    });
+    if (idx === -1) return {
+      ok: false,
+      reason: '该记录已不在回收站'
+    };
+    var entry = state.trash[idx];
+    var arr = trashSourceArray(entry.kind);
+    if (!Array.isArray(arr)) return {
+      ok: false,
+      reason: '未知的数据类型'
+    };
+    var existing = new Set(arr.map(function (x) {
+      return x && x.id;
+    }));
+    for (var i = 0; i < entry.items.length; i++) {
+      if (existing.has(entry.items[i].id)) return {
+        ok: false,
+        reason: '本地已存在同 ID 数据，无法恢复（冲突时云端优先保留现状）'
+      };
+    }
+    entry.items.forEach(function (snap) {
+      arr.push(JSON.parse(JSON.stringify(snap)));
+    });
+    state.trash.splice(idx, 1);
+    saveState();
+    if (typeof checkAutoAchievements === 'function') checkAutoAchievements();
+    return {
+      ok: true
+    };
+  }
+
+  /** 彻底删除一条回收站记录（不恢复、不可逆） */
+  function purgeTrashEntry(trashId) {
+    var before = (state.trash || []).length;
+    state.trash = (state.trash || []).filter(function (t) {
+      return !t || t.id !== trashId;
+    });
+    if (state.trash.length === before) return false;
+    saveState();
+    return true;
+  }
+
+  /** 清空回收站（彻底删除全部） */
+  function emptyTrash() {
+    var n = (state.trash || []).length;
+    state.trash = [];
+    saveState();
+    return n;
+  }
+
+  /** 清理过期回收站记录（loadState 时调用；有清理才落盘） */
+  function purgeExpiredTrash() {
+    if (!Array.isArray(state.trash) || !state.trash.length) return 0;
+    var now = Date.now();
+    var keep = state.trash.filter(function (t) {
+      return t && isIsoTimeString(t.expiresAt) && new Date(t.expiresAt).getTime() > now;
+    });
+    if (keep.length === state.trash.length) return 0;
+    var purged = state.trash.length - keep.length;
+    state.trash = keep;
+    saveState();
+    return purged;
+  }
+
+  /* ==================== v1.0.5：连续记录成长阶段 ====================
+   * 阶段表与 Windows 端同构（萌芽→…→传奇）；阶段由 streak 派生，不持久化。
+   */
+  var GROWTH_STAGES = [{
+    min: 1,
+    label: '萌芽',
+    emoji: '🌱'
+  }, {
+    min: 3,
+    label: '破土',
+    emoji: '🌿'
+  }, {
+    min: 7,
+    label: '成长',
+    emoji: '🍃'
+  }, {
+    min: 14,
+    label: '繁茂',
+    emoji: '🍀'
+  }, {
+    min: 30,
+    label: '根深',
+    emoji: '🌳'
+  }, {
+    min: 60,
+    label: '参天',
+    emoji: '🌲'
+  }, {
+    min: 100,
+    label: '传奇',
+    emoji: '🌌'
+  }];
+
+  /**
+   * 连续记录成长阶段。
+   * @returns {{stage:string, emoji:string, min:number, nextLabel:string|null, daysToNext:number}}
+   */
+  function growthStageOf(streakDays) {
+    var d = Math.max(0, Number(streakDays) || 0);
+    var cur = null;
+    for (var i = 0; i < GROWTH_STAGES.length; i++) {
+      if (d >= GROWTH_STAGES[i].min) cur = GROWTH_STAGES[i];
+    }
+    if (!cur) return {
+      stage: '未开始',
+      emoji: '即',
+      min: 0,
+      nextLabel: '萌芽',
+      daysToNext: 1
+    };
+    var idx = GROWTH_STAGES.indexOf(cur);
+    var next = GROWTH_STAGES[idx + 1] || null;
+    return {
+      stage: cur.label,
+      emoji: cur.emoji,
+      min: cur.min,
+      nextLabel: next ? next.label : null,
+      daysToNext: next ? Math.max(0, next.min - d) : 0
+    };
+  }
+
+  /* ==================== v1.0.5：历年今日回顾 ====================
+   * 从世界日志（memos）/ 动态（activities）/ 任务完成（doneAt）中抽取往年同月同日的记忆。
+   * 只做内存派生（不持久化），供主页回顾卡片消费。
+   */
+
+  /** 日期值 → {y, m, d}（本地时区）；非法返回 null */
+  function _localDatePartsOf(v) {
+    if (!v) return null;
+    var dt = new Date(v);
+    if (isNaN(dt.getTime())) return null;
+    return {
+      y: dt.getFullYear(),
+      m: dt.getMonth() + 1,
+      d: dt.getDate()
+    };
+  }
+
+  /**
+   * 历年今日记忆（不含今年），按年份分组降序，最多回溯 3 个年份、每年最多 4 条。
+   * @returns {Array<{year:number, items:Array<{icon:string,text:string,time:string}>}>}
+   */
+  function onThisDayMemories(st) {
+    var s = st || state || {};
+    var now = new Date();
+    var cm = now.getMonth() + 1,
+      cd = now.getDate(),
+      cy = now.getFullYear();
+    var out = {};
+    var push = function push(year, icon, text, time) {
+      if (!year || year >= cy) return; // 只看往年
+      if (!out[year]) out[year] = [];
+      if (out[year].length >= 4) return;
+      out[year].push({
+        icon: icon,
+        text: String(text || '').slice(0, 80),
+        time: String(time || '')
+      });
+    };
+    (Array.isArray(s.memos) ? s.memos : []).forEach(function (m) {
+      if (!m) return;
+      var p = _localDatePartsOf(m.createdAt);
+      if (p && p.m === cm && p.d === cd) push(p.y, '📝', m.text, p.y);
+    });
+    (Array.isArray(s.activities) ? s.activities : []).forEach(function (a) {
+      if (!a) return;
+      var p = _localDatePartsOf(a.createdAt || a.at);
+      if (p && p.m === cm && p.d === cd) push(p.y, a.kind === 'ach' ? '🏆' : '✅', a.title, p.y);
+    });
+    (Array.isArray(s.tasks) ? s.tasks : []).forEach(function (t) {
+      if (!t || t.status !== 'done') return;
+      var p = _localDatePartsOf(t.doneAt);
+      if (p && p.m === cm && p.d === cd) push(p.y, '✅', t.title, p.y);
+    });
+    return Object.keys(out).map(function (y) {
+      return {
+        year: Number(y),
+        items: out[y]
+      };
+    }).sort(function (a, b) {
+      return b.year - a.year;
+    }).slice(0, 3);
+  }
+
   /* ---- 导出公共 API 到 EO 命名空间并同步到全局（兼容旧引用 / 测试桩） ---- */
+  E.TRASH_KINDS = TRASH_KINDS;
+  E.TRASH_TTL_DAYS = TRASH_TTL_DAYS;
+  E.trashKindLabel = trashKindLabel;
+  E.softDeleteToTrash = softDeleteToTrash;
+  E.restoreFromTrash = restoreFromTrash;
+  E.purgeTrashEntry = purgeTrashEntry;
+  E.emptyTrash = emptyTrash;
+  E.purgeExpiredTrash = purgeExpiredTrash;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.softDeleteToTrash === "undefined") globalThis.softDeleteToTrash = softDeleteToTrash;
+  } catch (e) {}
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.restoreFromTrash === "undefined") globalThis.restoreFromTrash = restoreFromTrash;
+  } catch (e) {}
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.trashKindLabel === "undefined") globalThis.trashKindLabel = trashKindLabel;
+  } catch (e) {}
+  E.GROWTH_STAGES = GROWTH_STAGES;
+  E.growthStageOf = growthStageOf;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.growthStageOf === "undefined") globalThis.growthStageOf = growthStageOf;
+  } catch (e) {}
+  E.onThisDayMemories = onThisDayMemories;
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis.onThisDayMemories === "undefined") globalThis.onThisDayMemories = onThisDayMemories;
+  } catch (e) {}
   E.STORAGE_PREFIX = STORAGE_PREFIX;
   try {
     if (typeof globalThis !== "undefined" && typeof globalThis.STORAGE_PREFIX === "undefined") globalThis.STORAGE_PREFIX = STORAGE_PREFIX;
@@ -8196,6 +8664,27 @@ var backpackTab = 'all';
     current: function current() {
       return typeof state.birthDate === 'string' && /^\d{4}-01-01$/.test(state.birthDate) ? 1 : 0;
     }
+  }, {
+    // v1.0.5：与 Android egg_throwback 对齐——打开「历年今日」回顾卡片即达成。
+    // 触发本身无法从既有数据推导，落 state.eggs.throwbackViewed 计数（主页回顾卡片点击时 +1）。
+    key: 'egg_throwback',
+    title: '时光回溯',
+    category: 'egg',
+    target: 1,
+    desc: '打开过「历年今日」回顾。过去的这一天，你也在认真生活。',
+    current: function current() {
+      return state.eggs && state.eggs.throwbackViewed || 0;
+    }
+  }, {
+    // v1.0.5：与 Android egg_memory_album 对齐——打开「记忆相册」浏览图片收藏即达成。
+    key: 'egg_memory_album',
+    title: '记忆管理员',
+    category: 'egg',
+    target: 1,
+    desc: '翻开了记忆相册。图片会褪色，记录不会。',
+    current: function current() {
+      return state.eggs && state.eggs.albumViewed || 0;
+    }
   }];
 
   /* check() 一律由 current() >= target 派生（统一挂载，禁止手写独立判断）；
@@ -8299,6 +8788,13 @@ var backpackTab = 'all';
         }
         if (typeof playAchievementChime === 'function') playAchievementChime();
         addActivity('ach', a.title);
+        // v1.0.5：系统通知（Notification API）——成就解锁经事件总线由 app.js 统一消费
+        try {
+          if (typeof EarthBus !== 'undefined' && EarthBus && typeof EarthBus.emit === 'function') EarthBus.emit('eo:system-notify', {
+            title: '🏆 成就解锁',
+            body: a.title
+          });
+        } catch (e) {/* 静默 */}
       });
     }
     return newly;
@@ -9303,11 +9799,22 @@ var backpackTab = 'all';
   function confirmDeleteCollection(id) {
     var entry = getCollectionById(id);
     if (!entry) return;
-    openConfirm('确定删除收藏「' + entry.title + '」吗？附件将一并释放。', function () {
-      deleteCollection(id); // 内部先 detachCollectionFile（revoke blob）再移除
-      checkAutoAchievements();
-      renderBackpack();
-      toast('收藏已删除');
+    openConfirm('确定删除收藏「' + entry.title + '」吗？内容将移入回收站（30 天内可恢复）。', function () {
+      // v1.0.5：删除统一走回收站；会话内活跃 blob 仍需显式 revoke，避免内存泄漏
+      if (typeof softDeleteToTrash === 'function' && softDeleteToTrash('collection', id)) {
+        try {
+          if (typeof detachCollectionFile === 'function') detachCollectionFile(id);
+        } catch (e) {/* 忽略 */}
+        checkAutoAchievements();
+        renderBackpack();
+        toast('已移入回收站，30 天内可恢复');
+      } else {
+        // 兜底：回收站不可用时退回原硬删除路径（语义不变）
+        deleteCollection(id);
+        checkAutoAchievements();
+        renderBackpack();
+        toast('收藏已删除');
+      }
     });
   }
 
@@ -9749,7 +10256,26 @@ var backpackTab = 'all';
       memos: s.memos || [],
       items: s.items || [],
       achievements: s.achievements || [],
-      collections: s.collections || [],
+      collections: (s.collections || []).map(function (c) {
+        // v1.0.5：契约补齐——Android 侧 wire 形态为 fileMetaJson（JSON 字符串）+ fileUri；
+        // Web 内部用 fileMeta 对象，导出时映射；fileUri 用稳定伪 URI 标记来源（Web 不持久化二进制）。
+        if (!c || _typeof(c) !== 'object') return c;
+        var out = c;
+        try {
+          out = JSON.parse(JSON.stringify(c));
+        } catch (e) {
+          return c;
+        }
+        if (c.fileMeta && _typeof(c.fileMeta) === 'object') {
+          out.fileMetaJson = JSON.stringify({
+            name: String(c.fileMeta.name || ''),
+            mime: String(c.fileMeta.mime || ''),
+            size: Number(c.fileMeta.size) || 0
+          });
+          if (!out.fileUri) out.fileUri = 'web://collection/' + encodeURIComponent(String(c.id || ''));
+        }
+        return out;
+      }),
       locations: (s.locations || []).map(function (l) {
         if (!l || _typeof(l) !== 'object') return l;
         var out = {};
@@ -9837,9 +10363,32 @@ var backpackTab = 'all';
    */
   function extractBackupState(obj) {
     if (!obj || _typeof(obj) !== 'object') return null;
-    if (obj.format === BACKUP_FORMAT && obj.state && Array.isArray(obj.state.tasks)) return obj.state;
-    if (Array.isArray(obj.tasks)) return obj;
-    return null;
+    var st = null;
+    if (obj.format === BACKUP_FORMAT && obj.state && Array.isArray(obj.state.tasks)) st = obj.state;else if (Array.isArray(obj.tasks)) st = obj;
+    if (st) normalizeIncomingCollections(st);
+    return st;
+  }
+
+  /** v1.0.5：导入侧契约补齐——Android 导出的 collections 带 fileMetaJson（字符串）/fileUri，
+   * Web 内部用 fileMeta 对象。fileMeta 缺失而 fileMetaJson 存在时解析回填；畸形 JSON 静默忽略（元数据视为缺失）。 */
+  function normalizeIncomingCollections(st) {
+    var arr = st && st.collections;
+    if (!Array.isArray(arr)) return;
+    arr.forEach(function (c) {
+      if (!c || _typeof(c) !== 'object') return;
+      if (!c.fileMeta && typeof c.fileMetaJson === 'string' && c.fileMetaJson) {
+        try {
+          var m = JSON.parse(c.fileMetaJson);
+          if (m && _typeof(m) === 'object') {
+            c.fileMeta = {
+              name: String(m.name || ''),
+              mime: String(m.mime || ''),
+              size: Number(m.size) || 0
+            };
+          }
+        } catch (e) {/* 畸形 JSON 忽略 */}
+      }
+    });
   }
 
   /**
@@ -10960,6 +11509,15 @@ var backpackTab = 'all';
       }
       if (typeof openConfirm !== 'function') return;
       openConfirm('导入会与当前数据按主键合并（同一条数据以备份为准，本地新增的保留；导入前会自动留一份快照），确定继续？', function () {
+        // v1.0.5 跨端灵感接力：恢复前记录本地「灵感(idea)」id 集，恢复后对比云端新增 → 横幅转待办
+        var preIdeaIds = {};
+        try {
+          var localIdeas = typeof EOStore !== 'undefined' && EOStore && EOStore.getSync ? EOStore.getSync('earth_data') : null;
+          var lm = localIdeas && Array.isArray(localIdeas.memos) ? localIdeas.memos : [];
+          lm.forEach(function (m) {
+            if (m && m.type === 'idea') preIdeaIds[String(m.id)] = 1;
+          });
+        } catch (e) {/* 读取失败视为全部新增，宁多勿漏 */}
         var res2 = null;
         try {
           res2 = applyBackupPayload(obj);
@@ -10971,7 +11529,31 @@ var backpackTab = 'all';
           if (typeof toast === 'function') toast(res2 && res2.error || '恢复失败，当前数据未改动');
           return;
         }
+        // 灵感接力：云端比本地多的 idea 日志 → 存 sessionStorage，刷新后横幅一键转待办
+        try {
+          var cloudIdeas = (obj && obj.state && Array.isArray(obj.state.memos) ? obj.state.memos : []).filter(function (m) {
+            return m && m.type === 'idea' && m.text;
+          });
+          var fresh = cloudIdeas.filter(function (m) {
+            return !preIdeaIds[String(m.id)];
+          });
+          if (fresh.length) {
+            sessionStorage.setItem('eo_new_ideas', JSON.stringify(fresh.slice(0, 10).map(function (m) {
+              return {
+                id: String(m.id || ''),
+                text: String(m.text || '').slice(0, 120)
+              };
+            })));
+          }
+        } catch (e2) {/* 接力失败不阻断恢复 */}
         if (typeof toast === 'function') toast('已从云端恢复，即将刷新');
+        // v1.0.5：同步完成系统通知（经事件总线，app.js 统一消费）
+        try {
+          if (typeof EarthBus !== 'undefined' && EarthBus && typeof EarthBus.emit === 'function') EarthBus.emit('eo:system-notify', {
+            title: '☁️ 同步完成',
+            body: '已从云端恢复备份'
+          });
+        } catch (e3) {/* 静默 */}
         if (typeof setTimeout === 'function') {
           setTimeout(function () {
             try {
@@ -12593,6 +13175,11 @@ var backpackTab = 'all';
   var taskFilter = 'all'; // 任务页分类筛选：all | main | side | todo
   var taskDueFilter = false; // v15 修复：记账页「📅 到期任务提醒」跳转后，任务页仅展示即将到期（含已过期）的 To Do
   var taskHideDone = false; // v1.0.3 迭代 2：隐藏已完成任务（偏好持久化在 earth_ui_prefs.hideDoneTasks）
+  var taskBatchMode = false; // v1.0.5：批量管理模式（多选 → 批量完成 / 删除 / 导出）
+  var taskBatchSel = {}; // v1.0.5：批量选择集（id → true；会话态不持久化）
+  /** v1.0.5：完成任务庆祝连击（会话态）——3 秒内连续完成递增，文案渐强 */
+  var doneComboCount = 0;
+  var doneComboLastAt = 0;
 
   /** Web Audio 合成「叮」声（零依赖，无需音频文件）；环境不支持时静默降级 */
   var __dingCtx = null;
@@ -12615,6 +13202,19 @@ var backpackTab = 'all';
       o.start(now);
       o.stop(now + 0.26);
     } catch (e) {/* 无声降级 */}
+  }
+
+  /**
+   * v1.0.5：完成任务庆祝反馈——3 秒内连续完成计数递增，文案渐强（会话态，不持久化）。
+   * 调用点：To Do 勾选完成 / 非 To Do「✓ 完成」按钮 / 批量完成后一次性计一次批量。
+   */
+  function celebrateTaskDone() {
+    var now = Date.now();
+    doneComboCount = now - doneComboLastAt <= 3000 ? doneComboCount + 1 : 1;
+    doneComboLastAt = now;
+    var msg;
+    if (doneComboCount >= 5) msg = '🔥🎉⚡ 连击 ×' + doneComboCount + '，天下无双！';else if (doneComboCount === 4) msg = '🔥🎉 连击 ×4，效率拉满';else if (doneComboCount === 3) msg = '🎉✨ 连击 ×3，势不可挡';else if (doneComboCount === 2) msg = '✨✓ 连击 ×2，状态在线';else msg = '✓ 干得漂亮';
+    toast(msg);
   } // 成就页「仅看未解锁」开关
 
   /* ==================== 通用 UI 工具 ==================== */
@@ -13048,6 +13648,8 @@ var backpackTab = 'all';
     var streakDays = typeof currentStreakDays === 'function' ? currentStreakDays(state) : 0;
     var greetingText = typeof greetingBuild === 'function' ? greetingBuild(new Date().getHours(), latestMoodTextOf(state), streakDays) : '';
     var stageLabel = typeof streakStageLabel === 'function' ? streakStageLabel(typeof streakStage === 'function' ? streakStage(streakDays) : 0) : '';
+    // v1.0.5：连续记录成长阶段（萌芽→…→传奇），由 streak 派生；带「距下一阶段」进度
+    var growth = typeof growthStageOf === 'function' ? growthStageOf(streakDays) : null;
     var comebackText = typeof comebackMessage === 'function' ? comebackMessage(state) : '';
     var season = typeof seasonCurrent === 'function' ? seasonCurrent() : null;
     var xpTotalNow = typeof totalXpOf === 'function' ? totalXpOf(state) : 0;
@@ -13083,38 +13685,18 @@ var backpackTab = 'all';
 
     /* v1.0.2：历年今日 —— 去年今天有记录时，顶部轻量出现回忆卡（日志/任务/足迹）。 */
     var memoryCardHtml = function () {
-      var today = todayStr();
-      var lastYearToday = parseInt(today.slice(0, 4), 10) - 1 + today.slice(4);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(lastYearToday)) return '';
-      var rows = [];
-      (state.memos || []).forEach(function (m) {
-        if (m && m.text && localDayOf(m.createdAt) === lastYearToday) {
-          rows.push({
-            icon: '💭',
-            text: m.text
-          });
-        }
-      });
-      (state.tasks || []).forEach(function (t) {
-        if (t && t.status === 'done' && t.doneAt && localDayOf(t.doneAt) === lastYearToday) {
-          rows.push({
-            icon: '📋',
-            text: '完成「' + (t.title || '任务') + '」'
-          });
-        }
-      });
-      (state.locations || []).forEach(function (l) {
-        if (l && l.date === lastYearToday) rows.push({
-          icon: '🗺️',
-          text: '足迹 · ' + (l.name || '')
-        });
-      });
-      if (!rows.length) return '';
-      var shown = rows.slice(0, 4);
-      return '<div class="card memory-card">' + '<div class="card-title">🕰️ 去年的今天 · ' + escapeHtml(lastYearToday) + '</div>' + shown.map(function (r) {
-        var t = r.text.length > 40 ? r.text.slice(0, 40) + '…' : r.text;
-        return '<div class="memory-row"><span class="memory-icon">' + r.icon + '</span>' + '<span>' + escapeHtml(t) + '</span></div>';
-      }).join('') + (rows.length > shown.length ? '<div class="muted memory-more">还有 ' + (rows.length - shown.length) + ' 条当年的记录</div>' : '') + '<div class="muted memory-foot">那天的你留下的东西，今天还在。</div>' + '</div>';
+      // v1.0.5：升级为「历年今日」——覆盖往年各年份（日志/动态/任务完成），由 core.onThisDayMemories 派生
+      var years = typeof onThisDayMemories === 'function' ? onThisDayMemories(state) : [];
+      if (!years.length) return '';
+      // 翻开回顾即点亮彩蛋 egg_throwback（与 Android 同键，计数幂等）
+      if (typeof bumpEggCounter === 'function') bumpEggCounter('throwbackViewed', 1);
+      var yearBlocks = years.map(function (y) {
+        return '<div class="memory-year">' + '<div class="memory-year-label">' + y.year + ' 年的今天</div>' + y.items.map(function (r) {
+          var t = r.text.length > 40 ? r.text.slice(0, 40) + '…' : r.text;
+          return '<div class="memory-row"><span class="memory-icon">' + r.icon + '</span>' + '<span>' + escapeHtml(t) + '</span></div>';
+        }).join('') + '</div>';
+      }).join('');
+      return '<div class="card memory-card onthisday-card">' + '<div class="card-title">🕰️ 历年今日</div>' + yearBlocks + '<div class="muted memory-foot">那天的你留下的东西，今天还在。</div>' + '</div>';
     }();
 
     /* 1. 顶部角色横幅（左：头像 + 用户名/生日；右：等级信息） */
@@ -13331,14 +13913,14 @@ var backpackTab = 'all';
     /* 0. 主页标题栏（v10）：置于角色信息区上方；面板移入标题栏内作为绝对定位锚点。
        v1.0.2：标题区附当季限定徽章（春樱/夏夜/秋叶/冬雪），标题下方是动态问候语。 */
     var seasonBadgeHtml = season ? '<span class="season-badge" style="color:' + season.accent + '" title="' + season.label + '限定">' + season.emoji + ' ' + season.label + '</span>' : '';
-    var greetingHtml = greetingText ? '<p class="home-greeting">' + escapeHtml(greetingText) + (stageLabel ? ' <span class="streak-badge">' + escapeHtml(stageLabel) + ' · ' + streakDays + ' 天</span>' : '') + '</p>' : '';
+    var greetingHtml = greetingText ? '<p class="home-greeting">' + escapeHtml(greetingText) + (growth ? ' <span class="streak-badge" title="连续记录成长阶段">' + growth.emoji + ' ' + escapeHtml(growth.stage) + ' · ' + streakDays + ' 天' + (growth.nextLabel ? ' · 距「' + escapeHtml(growth.nextLabel) + '」还有 ' + growth.daysToNext + ' 天' : '') + '</span>' : '') + '</p>' : '';
     var comebackHtml = comebackText ? '<div class="comeback-card">🌱 ' + escapeHtml(comebackText) + '</div>' : '';
     var homeTitle = '<div class="home-titlebar">' + '<div class="home-title-text">' + '<h1 class="home-title">🌍 地球Online' + seasonBadgeHtml + '</h1>' + '<p class="home-subtitle">人生记录 · 开放世界</p>' + greetingHtml + '</div>' + morePanelHtml + '</div>';
 
     /* 0b. v1.2.1：主页顶部全局搜索（任务 / 物品 / 收藏）。
        放在标题栏下方而不是每个列表页各放一个 —— 三个数据源本来就跨页，
        只有在主页做才叫「全局」；空词时只有一根搜索条，不抢首屏。 */
-    var homeSearch = '<div class="home-search-wrap">' + '<div class="home-search-box">' + '<span class="home-search-icon" aria-hidden="true">🔍</span>' + '<input class="home-search-input" id="homeSearch" type="search" autocomplete="off" maxlength="40" ' + 'placeholder="搜索任务 / 物品 / 收藏…" aria-label="全局搜索">' + '<button type="button" class="home-search-clear" data-action="home-search-clear" ' + 'aria-label="清空搜索" title="清空">✕</button>' + '</div>' + '<div class="home-search-results" id="homeSearchResults"></div>' + '</div>';
+    var homeSearch = '<div class="home-search-wrap">' + '<div class="home-search-box">' + '<span class="home-search-icon" aria-hidden="true">🔍</span>' + '<input class="home-search-input" id="homeSearch" type="search" autocomplete="off" maxlength="40" ' + 'placeholder="搜索任务 / 物品 / 收藏 / 日志 / 成就 / 足迹…" aria-label="全局搜索">' + '<button type="button" class="home-search-clear" data-action="home-search-clear" ' + 'aria-label="清空搜索" title="清空">✕</button>' + '</div>' + '<div class="home-search-results" id="homeSearchResults"></div>' + '</div>';
     document.getElementById('content').innerHTML = '<section class="page home-page">' + homeTitle + homeSearch + memoryCardHtml + comebackHtml + banner + '<div class="overview-grid">' + overviewCards + '</div>' + '<div class="quick-grid">' + quickGrid + '</div>' + '<div class="card world-card">' + '<div class="card-title">🌍 世界日志</div>' + '<div class="world-input-row">' + '<input class="memo-input" id="homeMemoInput" placeholder="记录一闪而过的想法，回车即保存" maxlength="200">' +
     // v15：语音输入（Web Speech API，中文识别），识别结果直接填入上方输入框
     '<button class="btn btn-ghost btn-sm world-voice-btn" id="homeMemoVoice" data-action="home-memo-voice" title="语音输入" aria-label="语音输入">🎤</button>' + '<select id="homeMemoType" class="world-type">' + memoTypeOptions + '</select>' + '<button class="btn btn-primary btn-sm" data-action="home-memo-add">📌 记录</button>' + '</div>' + '<div class="world-list">' + worldRows + '</div>' + showAllMemosBtn + '</div>' + '<div class="card act-card">' + '<div class="card-title card-title-row">📡 最近动态' + '<span class="card-head-tools">' + '<button class="card-head-link" data-action="nav" data-page="data">查看 ›</button>' + '<button class="card-head-gear" data-action="home-feed-settings" title="显示设置" aria-label="最近动态显示设置">⚙️</button>' + '</span></div>' + '<div class="act-list">' + actRows + '</div>' + '</div>' + '<div class="card timeline-card">' + '<div class="card-title card-title-row">🕰️ 人生时间轴' + '<span class="card-head-tools">' + '<button class="card-head-gear" data-action="home-feed-settings" title="显示设置" aria-label="人生时间轴显示设置">⚙️</button>' + '</span></div>' + timelineHtml + '</div>' + lifeCardHtml + (todayLuck ? '<div class="card luck-card">' + '<div class="card-title">🔮 今日一签</div>' + '<div class="luck-body"><span class="luck-icon">' + todayLuck.icon + '</span>' + '<span class="luck-text">' + escapeHtml(todayLuck.text) + '</span></div>' + '<div class="muted luck-foot">每天翻开你过去留下的一页，明天再来会是新的一签。</div>' + '</div>' : '') + '<div class="home-quote">“' + escapeHtml(quote) + '”</div>' + '<p class="muted home-foot">提示：出生日期（等级 = 年龄）可在「个人资料」中修改。</p>' + '</section>';
@@ -13609,9 +14191,14 @@ var backpackTab = 'all';
     }].map(function (t) {
       return '<button class="tab ' + (taskFilter === t.k ? 'active' : '') + '" data-action="task-filter" data-cat="' + t.k + '">' + t.l + '</button>';
     }).join('');
+    // v1.0.5：批量操作条（仅批量模式渲染）。批量删除走回收站，可恢复。
+    var batchCount = Object.keys(taskBatchSel).filter(function (k) {
+      return taskBatchSel[k];
+    }).length;
+    var batchBarHtml = taskBatchMode ? '<div class="batch-bar">' + '<span class="batch-count">已选 ' + batchCount + ' 项</span>' + '<button class="btn btn-ghost btn-sm" data-action="task-batch-all">全选</button>' + '<button class="btn btn-ghost btn-sm" data-action="task-batch-none">取消全选</button>' + '<button class="btn btn-primary btn-sm" data-action="task-batch-done"' + (batchCount ? '' : ' disabled') + '>✓ 批量完成</button>' + '<button class="btn btn-danger btn-sm" data-action="task-batch-del"' + (batchCount ? '' : ' disabled') + '>🗑 批量删除</button>' + '<button class="btn btn-ghost btn-sm" data-action="task-batch-export"' + (batchCount ? '' : ' disabled') + '>⬇ 导出所选</button>' + '</div>' : '';
     var html = '<section class="page">' + '<div class="page-head">' + '<h2 class="page-title">任务</h2>' + '<div class="form-inline">' +
     // v1.0.3 迭代 2：日历视图直达（数据页的日历子视图）+ 隐藏已完成开关
-    '<button class="btn btn-ghost" data-action="goto-calendar">📅 日历视图</button>' + '<button class="btn btn-ghost" data-action="task-hide-done">' + (taskHideDone ? '👁 显示已完成' : '🙈 隐藏已完成') + '</button>' + '<button class="btn btn-primary" data-action="open-task-new">新增任务</button>' + '</div>' + '</div>' + '<div class="tabs">' + taskTabHtml + '</div>' + '<div class="legend">' + '<span class="legend-item"><span class="badge cat-main">主线</span>人生大方向，长期经营</span>' + '<span class="legend-item"><span class="badge cat-side">支线</span>主线下的具体领域</span>' + '<span class="legend-item"><span class="badge cat-todo">To Do</span>可勾选的具体行动</span>' + '</div>' + (taskDueFilter ? '<p class="backup-note">📅 即将到期的任务（含已过期），未来 7 天内到期会在此列出。' + '<button class="btn btn-ghost btn-sm" data-action="task-filter" data-cat="all">查看全部任务</button></p>' : '') + (roots.length ? roots.map(renderTaskNode).join('') : taskDueFilter ? '<div class="card empty">📭 近期没有即将到期的任务，继续保持~</div>' : function () {
+    '<button class="btn btn-ghost" data-action="goto-calendar">📅 日历视图</button>' + '<button class="btn btn-ghost" data-action="task-hide-done">' + (taskHideDone ? '👁 显示已完成' : '🙈 隐藏已完成') + '</button>' + '<button class="btn btn-ghost" data-action="task-batch-toggle">' + (taskBatchMode ? '✖ 退出批量' : '☑️ 批量管理') + '</button>' + '<button class="btn btn-primary" data-action="open-task-new">新增任务</button>' + '</div>' + '</div>' + '<div class="tabs">' + taskTabHtml + '</div>' + '<div class="legend">' + '<span class="legend-item"><span class="badge cat-main">主线</span>人生大方向，长期经营</span>' + '<span class="legend-item"><span class="badge cat-side">支线</span>主线下的具体领域</span>' + '<span class="legend-item"><span class="badge cat-todo">To Do</span>可勾选的具体行动</span>' + '</div>' + batchBarHtml + (taskDueFilter ? '<p class="backup-note">📅 即将到期的任务（含已过期），未来 7 天内到期会在此列出。' + '<button class="btn btn-ghost btn-sm" data-action="task-filter" data-cat="all">查看全部任务</button></p>' : '') + (roots.length ? roots.map(renderTaskNode).join('') : taskDueFilter ? '<div class="card empty">📭 近期没有即将到期的任务，继续保持~</div>' : function () {
       var t = taskFilter === 'side' ? {
         art: '🗺️',
         title: '还没有支线',
@@ -13644,7 +14231,7 @@ var backpackTab = 'all';
     var today = todayStr();
     var overdue = task.category === 'todo' && task.dueDate && task.dueDate < today && task.status !== 'done';
     var dueHtml = task.category === 'todo' && task.dueDate ? '<span class="due ' + (overdue ? 'due-overdue' : '') + '" title="到期日期">' + (overdue ? '已过期 ' : '到期 ') + escapeHtml(task.dueDate) + '</span>' : '';
-    return '<div class="task-node ' + (task.status === 'done' ? 'is-done' : '') + '">' + '<div class="task-row">' + '<span class="tree-toggle">' + (children.length ? '<button class="toggle-btn ' + (expanded ? 'expanded' : '') + '" data-action="toggle-task" data-id="' + task.id + '" title="展开 / 折叠">' + (expanded ? '▾' : '▸') + '</button>' : '') + '</span>' + (task.category === 'todo' ? '<input type="checkbox" class="todo-check' + (bouncedTodoIds.has(task.id) ? ' bounce' : '') + '" data-action="todo-toggle" data-id="' + task.id + '" ' + (task.status === 'done' ? 'checked' : '') + ' title="勾选即完成">' : '') + '<span class="badge ' + cat.cls + '">' + cat.label + '</span>' + '<span class="task-title">' + escapeHtml(task.title) + '</span>' + dueHtml + '<span class="status-badge ' + st.cls + '">' + st.label + '</span>' + '<span class="task-progress-wrap" title="进度 ' + task.progress + '%">' +
+    return '<div class="task-node ' + (task.status === 'done' ? 'is-done' : '') + (taskBatchMode ? ' batching' : '') + '">' + '<div class="task-row">' + '<span class="tree-toggle">' + (children.length ? '<button class="toggle-btn ' + (expanded ? 'expanded' : '') + '" data-action="toggle-task" data-id="' + task.id + '" title="展开 / 折叠">' + (expanded ? '▾' : '▸') + '</button>' : '') + '</span>' + (taskBatchMode ? '<input type="checkbox" class="batch-check" data-action="task-batch-check" data-id="' + task.id + '" ' + (taskBatchSel[task.id] ? 'checked' : '') + ' title="加入批量选择">' : '') + (task.category === 'todo' ? '<input type="checkbox" class="todo-check' + (bouncedTodoIds.has(task.id) ? ' bounce' : '') + '" data-action="todo-toggle" data-id="' + task.id + '" ' + (task.status === 'done' ? 'checked' : '') + ' title="勾选即完成">' : '') + '<span class="badge ' + cat.cls + '">' + cat.label + '</span>' + '<span class="task-title">' + escapeHtml(task.title) + '</span>' + dueHtml + '<span class="status-badge ' + st.cls + '">' + st.label + '</span>' + '<span class="task-progress-wrap" title="进度 ' + task.progress + '%">' +
     // 进度条改用 transform: scaleX()（0–1），与 .hero-exp-fill 同一套 GPU 优化
     '<span class="progress-bar sm"><span class="progress-fill" style="transform:scaleX(' + (Math.max(0, Math.min(100, task.progress)) / 100).toFixed(4) + ')"></span></span>' + '<span class="progress-num">' + task.progress + '%</span>' + '</span>' + '<span class="task-actions">' + (task.category !== 'todo' ? '<button class="icon-btn primary" data-action="task-quick-complete" data-id="' + task.id + '">' + (task.status === 'done' ? '↩ 重开' : '✓ 完成') + '</button>' : '') + '<button class="icon-btn" data-action="note-toggle" data-id="' + task.id + '" title="备注区">备注</button>' + '<button class="icon-btn" data-action="open-task-child" data-id="' + task.id + '" title="添加子任务">+子任务</button>' + '<button class="icon-btn" data-action="open-task-edit" data-id="' + task.id + '" title="编辑">编辑</button>' + '<button class="icon-btn danger" data-action="task-delete" data-id="' + task.id + '" title="删除">删除</button>' + '</span>' + '</div>' + (noteOpen ? '<div class="task-note">' + '<textarea class="note-textarea" data-note-for="' + task.id + '" ' + 'placeholder="自由备注区：进度、心得、记录买了什么装备……保存时会自动检测可入库物品">' + escapeHtml(task.note || '') + '</textarea>' + '<div class="note-foot">' + '<span class="muted">最近更新：' + escapeHtml(task.lastModified) + '</span>' + '<button class="btn btn-primary btn-sm" data-action="note-save" data-id="' + task.id + '">保存备注</button>' + '</div>' + '</div>' : '') + (expanded && children.length ? '<div class="task-children">' + children.map(renderTaskNode).join('') + '</div>' : '') + '</div>';
   }
@@ -14469,7 +15056,9 @@ var backpackTab = 'all';
       } catch (e) {}
       return '' + '<div class="card">' + '<div class="card-title">📊 记账</div>' + '<p class="muted">记账由 Verifin 提供 —— 一款完全免费 · 开源 · 数据自主的极简记账工具，' + '账本只保存在本地。点击下方按钮唤起已安装的 App，未安装会引导你下载。</p>' + '<div class="form-row"><span class="field-label">提醒任务到期</span>' + '<div class="form-inline">' + '<button class="btn btn-primary" data-action="open-verifin">📊 打开记账</button>' + '<button class="switch' + (dueNotifyOn ? ' on' : '') + '" data-action="notify-toggle">' + '<span class="switch-text">' + (dueNotifyOn ? '开' : '关') + '</span></button>' + '</div>' + '</div>' + '<div class="form-row"><span class="field-label">到期任务提醒</span>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="due-tasks">📅 查看到期任务</button>' + '</div>' + '</div>' + '</div>';
     }() + /* ==================== ③ 数据与隐私 ==================== */
-    groupDivider() + groupTitle('🔒', '数据与隐私', '备份 · 同步 · 重置') + '<div class="card">' + '<div class="card-title">📦 数据备份</div>' + '<p class="muted">导出为 JSON 文件保存到本地，或从此前导出的备份文件恢复。' + '导入采用<b>按主键合并</b>：同一条数据以备份为准，本地新增的部分会保留，导入前自动留一份快照。</p>' + '<div class="backup-actions">' + '<button class="btn btn-primary" data-action="export-backup">📦 导出备份</button>' + '<button class="btn btn-ghost" data-action="import-backup">📂 导入备份</button>' + '</div>' + '<div class="backup-summary">' + summaryCells + '</div>' + '<p class="backup-note">存档占用约 ' + sum.bytesKb + ' KB。' + '提示：离线访问与「添加到主屏幕」需要浏览器支持离线运行能力。' + '直接双击打开（file://）时浏览器限制无法注册，可通过本地服务器访问，' + '例如在文件夹内执行 <code>' + escapeHtml(localCmd) + '</code> 后打开 <code>' + escapeHtml(localUrl) + '</code>。</p>' + '</div>' +
+    groupDivider() + groupTitle('🔒', '数据与隐私', '备份 · 同步 · 重置') + '<div class="card">' + '<div class="card-title">📦 数据备份</div>' + '<p class="muted">导出为 JSON 文件保存到本地，或从此前导出的备份文件恢复。' + '导入采用<b>按主键合并</b>：同一条数据以备份为准，本地新增的部分会保留，导入前自动留一份快照。</p>' + '<div class="backup-actions">' + '<button class="btn btn-primary" data-action="export-backup">📦 导出备份</button>' + '<button class="btn btn-ghost" data-action="import-backup">📂 导入备份</button>' +
+    // v1.0.5：数据导入增强——CSV 任务清单 / Markdown 日记（纯前端解析）
+    '<button class="btn btn-ghost" data-action="import-csv">📄 导入 CSV 任务</button>' + '<button class="btn btn-ghost" data-action="import-md">📓 导入 Markdown 日记</button>' + '</div>' + '<div class="backup-summary">' + summaryCells + '</div>' + '<p class="backup-note">存档占用约 ' + sum.bytesKb + ' KB。' + '提示：离线访问与「添加到主屏幕」需要浏览器支持离线运行能力。' + '直接双击打开（file://）时浏览器限制无法注册，可通过本地服务器访问，' + '例如在文件夹内执行 <code>' + escapeHtml(localCmd) + '</code> 后打开 <code>' + escapeHtml(localUrl) + '</code>。</p>' + '</div>' +
     // v1.2.1：本地自动备份（每次写操作后防抖落盘，保留最近 3 份）
     function () {
       var list = typeof listAutoBackups === 'function' ? listAutoBackups() : [];
@@ -14485,6 +15074,10 @@ var backpackTab = 'all';
     '<div class="card">' + '<div class="card-title">🗂️ 成就备份</div>' + achBackupCardHtml() + '</div>' +
     // v1.2.1：隐私政策入口
     '<div class="card">' + '<div class="card-title">🔏 隐私政策</div>' + '<p class="muted">本应用不收集任何数据，所有内容只保存在这台设备上。' + '完整说明（联网时机、权限用途、数据删除）可随时查阅。</p>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="privacy-policy">📄 查看隐私政策</button>' + '</div>' + '</div>' +
+    // v1.0.5：回收站（删除暂存 30 天，可恢复）
+    renderTrashCardHtml() +
+    // v1.0.5：新能力（分享卡片 / 记忆相册 / 系统通知）
+    '<div class="card">' + '<div class="card-title">✨ 体验增强</div>' + '<p class="muted">生成一张可保存分享的「人生卡片」长图；翻一翻收藏夹里的图片记忆；' + '开启系统通知后，任务到期、成就解锁、云端同步完成都会提醒你。</p>' + '<div class="form-inline">' + '<button class="btn btn-ghost" data-action="share-life-card">🎁 分享人生卡片</button>' + '<button class="btn btn-ghost" data-action="open-memory-album">🖼️ 记忆相册</button>' + '<button class="btn btn-ghost" data-action="notify-toggle">🔔 系统通知：' + (readNotifyPref() === 'on' ? '已开启' : '已关闭') + '</button>' + '</div>' + '<p class="backup-note">快捷键：Alt+N 新建任务 · Alt+1~8 切换模块（与 Windows 端 Ctrl 快捷键同表；' + '浏览器会保留 Ctrl 组合键，故 Web 端以 Alt 触发）。</p>' + '</div>' +
     // v1.0.5：危险区 —— 清空数据（醒目确认 + 可选删云端 + 防同步拉回）
     '<div class="card danger-zone">' + '<div class="card-title">⚠️ 危险区</div>' + '<p class="muted">清空本机全部用户数据（任务、日志、物品、成就、收藏、足迹、个人资料等），' + '并恢复为全新种子数据。<b>清空后无法撤销</b>，建议先「导出备份」。' + '主题、壁纸、WebDAV 与 AI 配置等应用设置会保留；清空后会暂停一次启动时的云端自动拉取，' + '防止旧备份被同步回来。</p>' + '<div class="form-inline">' + '<button class="btn btn-danger" data-action="reset-data">🗑️ 清空数据</button>' + '<button class="btn btn-ghost" data-action="reset-resync">☁️ 重新同步（上传当前数据到云端）</button>' + '</div>' + '<p class="backup-note">「重新同步」会把当前（清空后的）数据上传云端覆盖旧备份，用于恢复多设备同步。</p>' + '</div>' + /* ==================== ④ 关于 ==================== */
     groupDivider() + groupTitle('ℹ️', '关于', '版本 · 团队 · 赞助') + aboutCard() + '</section>';
@@ -14765,6 +15358,53 @@ var backpackTab = 'all';
       });
       n++;
     }
+
+    // v1.0.5：搜索覆盖补全——世界日志 / 成就 / 足迹（全部读内存镜像，不直接查 IndexedDB）
+    var memos = Array.isArray(state.memos) ? state.memos : [];
+    n = 0;
+    for (var _i3 = 0; _i3 < memos.length && n < max; _i3++) {
+      var m = memos[_i3];
+      if (!m || !hit(m.text)) continue;
+      out.push({
+        page: 'data',
+        tab: '',
+        icon: '📝',
+        title: String(m.text || '').slice(0, 60),
+        sub: (m.createdAt || '').slice(0, 10),
+        kind: '日志'
+      });
+      n++;
+    }
+    var achs = Array.isArray(state.achievements) ? state.achievements : [];
+    n = 0;
+    for (var _i4 = 0; _i4 < achs.length && n < max; _i4++) {
+      var a = achs[_i4];
+      if (!a || !hit(a.title) && !hit(a.desc)) continue;
+      out.push({
+        page: 'achievements',
+        tab: '',
+        icon: '🏆',
+        title: String(a.title || '(未命名成就)'),
+        sub: a.unlocked ? '已解锁 · ' + String(a.desc || '').slice(0, 30) : '未解锁',
+        kind: '成就'
+      });
+      n++;
+    }
+    var locs = Array.isArray(state.locations) ? state.locations : [];
+    n = 0;
+    for (var _i5 = 0; _i5 < locs.length && n < max; _i5++) {
+      var l = locs[_i5];
+      if (!l || !hit(l.name) && !hit(l.note)) continue;
+      out.push({
+        page: 'map',
+        tab: '',
+        icon: '🗺️',
+        title: String(l.name || '(未命名足迹)'),
+        sub: [l.date, l.note ? String(l.note).slice(0, 30) : ''].filter(Boolean).join(' · '),
+        kind: '足迹'
+      });
+      n++;
+    }
     return out;
   }
 
@@ -14998,7 +15638,10 @@ var backpackTab = 'all';
             if (!qcTask) break;
             var willDone = qcTask.status !== 'done';
             setTodoDone(qcTask, willDone);
-            if (willDone) playDing();
+            if (willDone) {
+              playDing();
+              celebrateTaskDone();
+            }
             checkAutoAchievements();
             refreshCurrentPage();
             break;
@@ -15018,16 +15661,136 @@ var backpackTab = 'all';
             var names = ids.map(getTaskById).filter(Boolean).map(function (t) {
               return t.title;
             });
-            openConfirm('将级联删除 ' + ids.length + ' 个任务（含子任务：' + names.join('、') + '），此操作不可撤销，确定吗？', function () {
-              deleteTaskCascade(id);
+            openConfirm('将删除 ' + ids.length + ' 个任务（含子任务：' + names.join('、') + '），' + '内容移入回收站保留 30 天，可随时恢复。确定吗？', function () {
+              softDeleteToTrash('task', id);
               taskTreeExpanded.delete(id);
               noteOpenIds.delete(id);
               checkAutoAchievements();
               refreshCurrentPage();
-              toast('任务已删除');
+              toast('已移入回收站，30 天内可恢复');
             });
             break;
           }
+        /* ---------- v1.0.5：批量操作（多选 → 完成 / 删除走回收站 / 导出） ---------- */
+        case 'task-batch-toggle':
+          taskBatchMode = !taskBatchMode;
+          Object.keys(taskBatchSel).forEach(function (k) {
+            delete taskBatchSel[k];
+          });
+          refreshCurrentPage();
+          break;
+        case 'task-batch-check':
+          if (id) taskBatchSel[id] = !!btn.checked;
+          refreshBatchBar();
+          break;
+        case 'task-batch-all':
+          getRootTasks().forEach(function (t) {
+            taskBatchSel[t.id] = true;
+          });
+          refreshCurrentPage();
+          break;
+        case 'task-batch-none':
+          Object.keys(taskBatchSel).forEach(function (k) {
+            delete taskBatchSel[k];
+          });
+          refreshCurrentPage();
+          break;
+        case 'task-batch-done':
+          {
+            var selDone = selectedBatchIds();
+            if (!selDone.length) break;
+            var doneN = 0;
+            selDone.forEach(function (tid) {
+              var t = getTaskById(tid);
+              if (t && t.status !== 'done') {
+                setTodoDone(t, true);
+                doneN++;
+              }
+            });
+            Object.keys(taskBatchSel).forEach(function (k) {
+              delete taskBatchSel[k];
+            });
+            checkAutoAchievements();
+            refreshCurrentPage();
+            toast(doneN ? '✓🎉 已批量完成 ' + doneN + ' 个任务' : '所选任务均已完成');
+            break;
+          }
+        case 'task-batch-del':
+          {
+            var selDel = selectedBatchIds();
+            if (!selDel.length) break;
+            openConfirm('将把所选 ' + selDel.length + ' 个任务移入回收站（保留 30 天，可恢复）。确定吗？', function () {
+              var delN = 0;
+              selDel.forEach(function (tid) {
+                if (softDeleteToTrash('task', tid)) delN++;
+              });
+              Object.keys(taskBatchSel).forEach(function (k) {
+                delete taskBatchSel[k];
+              });
+              checkAutoAchievements();
+              refreshCurrentPage();
+              toast('已移入回收站 ' + delN + ' 个任务');
+            });
+            break;
+          }
+        case 'task-batch-export':
+          {
+            var selExp = selectedBatchIds();
+            if (!selExp.length) break;
+            exportSelectedTasks(selExp);
+            break;
+          }
+
+        /* ---------- v1.0.5：回收站 ---------- */
+        case 'trash-restore':
+          {
+            var r = typeof restoreFromTrash === 'function' ? restoreFromTrash(id) : {
+              ok: false,
+              reason: '模块未就绪'
+            };
+            toast(r.ok ? '已恢复' : r.reason || '恢复失败');
+            if (r.ok) refreshCurrentPage();
+            break;
+          }
+        case 'trash-purge':
+          openConfirm('彻底删除该记录？此操作不可恢复。', function () {
+            if (typeof purgeTrashEntry === 'function') purgeTrashEntry(id);
+            refreshCurrentPage();
+            toast('已彻底删除');
+          });
+          break;
+        case 'trash-empty':
+          openConfirm('清空回收站？其中 ' + (state.trash || []).length + ' 条记录将被彻底删除，不可恢复。', function () {
+            if (typeof emptyTrash === 'function') emptyTrash();
+            refreshCurrentPage();
+            toast('回收站已清空');
+          });
+          break;
+
+        /* ---------- v1.0.5：记忆相册 / 分享卡片 / 通知 ---------- */
+        case 'open-memory-album':
+          openMemoryAlbum();
+          break;
+        case 'album-close':
+          {
+            var m = document.getElementById('albumModal');
+            if (m) m.remove();
+            break;
+          }
+        case 'share-life-card':
+          shareLifeCard();
+          break;
+        case 'notify-toggle':
+          handleNotifyToggle(btn);
+          break;
+
+        /* ---------- v1.0.5：数据导入增强（CSV 任务 / Markdown 日记） ---------- */
+        case 'import-csv':
+          openDataFilePicker('csv');
+          break;
+        case 'import-md':
+          openDataFilePicker('md');
+          break;
         case 'backpack-tab':
           backpackTab = btn.dataset.tab;
           renderBackpack();
@@ -15051,10 +15814,10 @@ var backpackTab = 'all';
           {
             var _item = getItemById(id);
             if (_item) {
-              openConfirm('确定将「' + _item.name + '」移出背包吗？', function () {
-                deleteItem(id);
+              openConfirm('确定将「' + _item.name + '」移出背包吗？内容将移入回收站（30 天内可恢复）。', function () {
+                softDeleteToTrash('item', id);
                 renderBackpack();
-                toast('已移出背包');
+                toast('已移入回收站');
               });
             }
             break;
@@ -15221,9 +15984,9 @@ var backpackTab = 'all';
             break;
           }
         case 'memo-del':
-          deleteMemo(id);
+          softDeleteToTrash('memo', id);
           renderHome();
-          toast('记录已删除');
+          toast('记录已移入回收站');
           break;
 
         /* ---------- 个人资料（profile.js 导出，T03） ---------- */
@@ -15826,7 +16589,10 @@ var backpackTab = 'all';
         if (!task) return;
         bouncedTodoIds.add(task.id);
         setTodoDone(task, e.target.checked);
-        if (e.target.checked) playDing();
+        if (e.target.checked) {
+          playDing();
+          celebrateTaskDone();
+        }
         checkAutoAchievements();
         refreshCurrentPage();
         return;
@@ -15911,6 +16677,15 @@ var backpackTab = 'all';
         var files = e.target.files;
         if (!files || !files.length) return;
         if (typeof handleBackupFileSelected === 'function') handleBackupFileSelected(files[0]);
+      });
+    }
+    // v1.0.5：CSV / Markdown 数据导入文件框
+    var dataFile = document.getElementById('dataFileInput');
+    if (dataFile) {
+      dataFile.addEventListener('change', function (e) {
+        var files = e.target.files;
+        if (!files || !files.length) return;
+        importDataFile(files[0]);
       });
     }
   }
@@ -16012,8 +16787,8 @@ var backpackTab = 'all';
       }
       if (p < 1) requestAnimationFrame(frame);else {
         // 收尾：确保落在精确目标值上
-        for (var _i3 = 0; _i3 < list.length; _i3++) {
-          var _it = list[_i3];
+        for (var _i6 = 0; _i6 < list.length; _i6++) {
+          var _it = list[_i6];
           if (_it.last !== _it.target) _it.el.textContent = _it.target;
         }
       }
@@ -16070,6 +16845,393 @@ var backpackTab = 'all';
     if (typeof ensureModule === "function") ensureModule("map").then(function () {
       if (typeof EO !== "undefined" && EO && EO.map) EO.map.renderMapAuto();
     });
+  }
+
+  /* ==================== v1.0.5：批量操作辅助 ==================== */
+
+  /** 当前批量选择集（数组） */
+  function selectedBatchIds() {
+    return Object.keys(taskBatchSel).filter(function (k) {
+      return taskBatchSel[k];
+    });
+  }
+
+  /** 批量模式下的局部刷新：只重绘批量条与复选框态，不整页重绘（避免丢勾选焦点） */
+  function refreshBatchBar() {
+    if (typeof refreshCurrentPage === 'function') refreshCurrentPage();
+  }
+
+  /** 导出所选任务为 JSON 文件（快照含子树；不入回收站，纯导出） */
+  function exportSelectedTasks(ids) {
+    var snaps = ids.map(function (tid) {
+      return getTaskById(tid);
+    }).filter(Boolean).map(function (t) {
+      return JSON.parse(JSON.stringify(t));
+    });
+    var payload = {
+      format: 'earth-online-tasks-export',
+      appVersion: typeof APP_INFO !== 'undefined' && APP_INFO ? APP_INFO.version : '',
+      exportedAt: new Date().toISOString(),
+      count: snaps.length,
+      tasks: snaps
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json'
+    });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'tasks-export-' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 3000);
+    toast('已导出 ' + snaps.length + ' 个任务');
+  }
+
+  /* ==================== v1.0.5：回收站（设置页卡片渲染） ==================== */
+
+  /** 设置页「回收站」卡片；空时渲染一行说明 */
+  function renderTrashCardHtml() {
+    var list = Array.isArray(state.trash) ? state.trash : [];
+    var now = Date.now();
+    var rows = list.map(function (tr) {
+      var days = Math.max(0, Math.ceil((new Date(tr.expiresAt).getTime() - now) / 86400000));
+      return '<div class="trash-row">' + '<span class="badge cat-todo">' + escapeHtml(trashKindLabel(tr.kind)) + '</span>' + '<span class="trash-title" title="' + escapeHtml(tr.title) + '">' + escapeHtml(tr.title) + '</span>' + '<span class="muted trash-days">剩 ' + days + ' 天</span>' + '<span class="task-actions">' + '<button class="icon-btn primary" data-action="trash-restore" data-id="' + tr.id + '">恢复</button>' + '<button class="icon-btn danger" data-action="trash-purge" data-id="' + tr.id + '">彻底删除</button>' + '</span>' + '</div>';
+    }).join('');
+    if (!list.length) {
+      return '<div class="card">' + '<div class="card-title">🗑️ 回收站</div>' + '<p class="muted">删除的任务 / 物品 / 收藏 / 日志会在这里保留 30 天，可随时恢复。回收站是空的。</p>' + '</div>';
+    }
+    return '<div class="card trash-card">' + '<div class="card-title">🗑️ 回收站（' + list.length + '）</div>' + rows + '<div class="form-inline"><button class="btn btn-danger btn-sm" data-action="trash-empty">清空回收站</button></div>' + '</div>';
+  }
+
+  /* ==================== v1.0.5：记忆相册（图片收藏浏览 → egg_memory_album） ==================== */
+
+  function openMemoryAlbum() {
+    var cols = (Array.isArray(state.collections) ? state.collections : []).filter(function (c) {
+      return c && c.fileMeta && String(c.fileMeta.mime || '').indexOf('image/') === 0;
+    });
+    if (typeof bumpEggCounter === 'function') bumpEggCounter('albumViewed', 1);
+    if (typeof checkAutoAchievements === 'function') checkAutoAchievements();
+    var tiles = cols.map(function (c) {
+      var live = '';
+      try {
+        live = typeof EO !== 'undefined' && EO.getCollectionBlobUrl ? EO.getCollectionBlobUrl(c.id) || '' : '';
+      } catch (e) {
+        live = '';
+      }
+      var inner = live ? '<img class="album-img" src="' + live + '" alt="' + escapeHtml(c.title || '') + '">' : '<div class="album-img album-img-missing">🖼️<br><span class="muted">需重新关联</span></div>';
+      return '<div class="album-tile" title="' + escapeHtml(c.title || '') + '">' + inner + '<div class="album-cap">' + escapeHtml(String(c.title || '').slice(0, 14)) + '</div></div>';
+    }).join('');
+    var body = cols.length ? '<div class="album-grid">' + tiles + '</div>' : '<p class="muted">相册还是空的——去收藏夹添加带图片的收藏吧。</p>';
+    var old = document.getElementById('albumModal');
+    if (old) old.remove();
+    var wrap = document.createElement('div');
+    wrap.id = 'albumModal';
+    wrap.className = 'modal';
+    wrap.innerHTML = '<div class="modal-box album-box">' + '<h3 class="modal-title">🖼️ 记忆相册（' + cols.length + '）</h3>' + body + '<div class="form-inline"><button class="btn btn-ghost" data-action="album-close">关闭</button></div>' + '</div>';
+    document.getElementById('modal-root').appendChild(wrap);
+  }
+
+  /* ==================== v1.0.5：分享人生卡片（Canvas 导出 PNG，零外部依赖） ==================== */
+
+  function shareLifeCard() {
+    try {
+      var cv = document.createElement('canvas');
+      cv.width = 750;
+      cv.height = 1000;
+      var ctx = cv.getContext('2d');
+      if (!ctx) {
+        toast('当前环境不支持画布导出');
+        return;
+      }
+      // 视觉基线：底 #f8f6f2 / 琥珀 #d4a373 / 文字 #1e1a16 · #7a7268
+      ctx.fillStyle = '#f8f6f2';
+      ctx.fillRect(0, 0, 750, 1000);
+      ctx.fillStyle = '#d4a373';
+      ctx.fillRect(0, 0, 750, 8);
+      ctx.fillRect(0, 992, 750, 8);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#1e1a16';
+      ctx.font = 'bold 44px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.fillText('🌍 地球Online · 人生档案', 375, 120);
+      var profile = state.profile || {};
+      ctx.font = '30px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.fillText(String(profile.name || '地球玩家').slice(0, 12), 375, 190);
+      var streakDays = typeof currentStreakDays === 'function' ? currentStreakDays(state) : 0;
+      var growth = typeof growthStageOf === 'function' ? growthStageOf(streakDays) : null;
+      var doneTasks = (state.tasks || []).filter(function (t) {
+        return t.status === 'done';
+      }).length;
+      var unlockedAch = (state.achievements || []).filter(function (a) {
+        return a && a.unlocked;
+      }).length;
+      var stats = [['连续记录', streakDays + ' 天' + (growth ? ' · ' + growth.emoji + growth.stage : '')], ['完成任务', String(doneTasks)], ['物品', String((state.items || []).length)], ['收藏', String((state.collections || []).length)], ['足迹', String((state.locations || []).length)], ['成就解锁', unlockedAch + ' / ' + (state.achievements || []).length]];
+      ctx.font = '28px "PingFang SC", "Microsoft YaHei", sans-serif';
+      stats.forEach(function (s, i) {
+        var y = 300 + i * 90;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#7a7268';
+        ctx.fillText(s[0], 150, y);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#1e1a16';
+        ctx.fillText(s[1], 600, y);
+        ctx.strokeStyle = '#e8e2da';
+        ctx.beginPath();
+        ctx.moveTo(130, y + 24);
+        ctx.lineTo(620, y + 24);
+        ctx.stroke();
+      });
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#b0a89c';
+      ctx.font = '22px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.fillText('记录人生 · 开放世界', 375, 880);
+      var ver = typeof APP_INFO !== 'undefined' && APP_INFO ? 'v' + APP_INFO.version : '';
+      ctx.fillText(ver + ' · ' + todayStr(), 375, 920);
+      var a = document.createElement('a');
+      a.href = cv.toDataURL('image/png');
+      a.download = 'earth-online-life-card-' + todayStr() + '.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast('人生卡片已生成（PNG）');
+    } catch (e) {
+      toast('生成失败：' + (e && e.message ? e.message : '未知错误'));
+    }
+  }
+
+  /* ==================== v1.0.5：通知提醒（Notification API） ==================== */
+
+  /** 通知偏好（earth_notify：'on' | 'off'；EOStore + localStorage 双写，读取同通道兜底；
+   * 与 app.js notifyEnabled 同语义：未设置视为 on——无权限时系统通知本就静默，不会打扰） */
+  function readNotifyPref() {
+    var v = null;
+    try {
+      if (typeof EOStore !== 'undefined' && EOStore && EOStore.getSync) v = EOStore.getSync('earth_notify');
+    } catch (e) {}
+    if (v !== 'on' && v !== 'off') {
+      try {
+        v = localStorage.getItem('earth_notify');
+      } catch (e2) {}
+    }
+    return v === 'off' ? 'off' : 'on';
+  }
+  function writeNotifyPref(v) {
+    try {
+      if (typeof EOStore !== 'undefined' && EOStore && typeof EOStore.set === 'function') EOStore.set('earth_notify', v);
+    } catch (e) {}
+    try {
+      localStorage.setItem('earth_notify', v);
+    } catch (e2) {}
+  }
+
+  /** 设置页开关：开启时请求权限（浏览器会弹授权框），拒绝则给引导文案 */
+  function handleNotifyToggle(btn) {
+    var target = readNotifyPref() === 'on' ? 'off' : 'on';
+    if (target === 'off') {
+      writeNotifyPref('off');
+      refreshCurrentPage();
+      toast('已关闭系统通知');
+      return;
+    }
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast('当前浏览器不支持系统通知');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      writeNotifyPref('on');
+      refreshCurrentPage();
+      toast('已开启系统通知：任务到期 / 成就解锁 / 同步完成都会提醒');
+      return;
+    }
+    Notification.requestPermission().then(function (p) {
+      if (p === 'granted') {
+        writeNotifyPref('on');
+        refreshCurrentPage();
+        toast('已开启系统通知');
+      } else {
+        toast('通知权限被拒绝——可在浏览器地址栏锁图标中重新允许');
+      }
+      if (btn && typeof refreshCurrentPage === 'function') refreshCurrentPage();
+    }).catch(function () {
+      toast('通知权限请求失败');
+    });
+  }
+
+  /** 发一条系统通知（权限未授予 / 偏好关闭时静默） */
+  function systemNotify(title, body) {
+    try {
+      if (readNotifyPref() !== 'on') return;
+      if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
+      new Notification(String(title || '地球Online'), {
+        body: String(body || ''),
+        icon: 'icons/icon.png'
+      });
+    } catch (e) {/* 静默 */}
+  }
+
+  /* ==================== v1.0.5：数据导入增强（CSV 任务 / Markdown 日记） ==================== */
+
+  var dataImportKind = 'csv';
+
+  /** 触发数据文件选择框（kind: 'csv' | 'md'） */
+  function openDataFilePicker(kind) {
+    dataImportKind = kind === 'md' ? 'md' : 'csv';
+    var input = document.getElementById('dataFileInput');
+    if (!input) {
+      toast('导入组件未就绪，请刷新页面');
+      return;
+    }
+    input.value = '';
+    input.click();
+  }
+
+  /** CSV 文本 → 任务列表（表头可选：title,category,status,dueDate,note） */
+  function parseTasksCsv(text) {
+    var lines = String(text || '').split(/\r?\n/).filter(function (l) {
+      return l.trim();
+    });
+    if (!lines.length) return [];
+    var splitCsv = function splitCsv(line) {
+      var out = [];
+      var cur = '';
+      var inQ = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (inQ) {
+          if (ch === '"' && line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else if (ch === '"') inQ = false;else cur += ch;
+        } else if (ch === '"') inQ = true;else if (ch === ',') {
+          out.push(cur);
+          cur = '';
+        } else cur += ch;
+      }
+      out.push(cur);
+      return out.map(function (s) {
+        return s.trim();
+      });
+    };
+    var start = 0;
+    var head = splitCsv(lines[0]).map(function (s) {
+      return s.toLowerCase();
+    });
+    var col = {
+      title: 0,
+      category: 1,
+      status: 2,
+      dueDate: 3,
+      note: 4
+    };
+    if (head.indexOf('title') !== -1) {
+      start = 1;
+      col.title = head.indexOf('title');
+      col.category = head.indexOf('category');
+      col.status = head.indexOf('status');
+      col.dueDate = head.indexOf('duedate');
+      col.note = head.indexOf('note');
+    }
+    var STATUS = {
+      planning: 'planning',
+      active: 'active',
+      paused: 'paused',
+      done: 'done'
+    };
+    var out = [];
+    for (var i = start; i < lines.length; i++) {
+      var c = splitCsv(lines[i]);
+      var title = c[col.title] || '';
+      if (!title) continue;
+      var statusRaw = String((col.status >= 0 ? c[col.status] : '') || '').toLowerCase();
+      var catRaw = String((col.category >= 0 ? c[col.category] : '') || '').toLowerCase();
+      out.push({
+        title: title.slice(0, 120),
+        category: ['main', 'side', 'todo'].indexOf(catRaw) !== -1 ? catRaw : 'todo',
+        status: STATUS[statusRaw] || 'planning',
+        dueDate: col.dueDate >= 0 && /^\d{4}-\d{2}-\d{2}$/.test(c[col.dueDate] || '') ? c[col.dueDate] : null,
+        note: (col.note >= 0 ? c[col.note] : '') || ''
+      });
+    }
+    return out;
+  }
+
+  /** Markdown 日记文本 → 日志列表（'# 标题' / '## YYYY-MM-DD' 日期段 / 普通行 → note） */
+  function parseDiaryMarkdown(text) {
+    var lines = String(text || '').split(/\r?\n/);
+    var out = [];
+    var curDate = null;
+    lines.forEach(function (raw) {
+      var line = raw.trim();
+      if (!line) return;
+      var h2 = line.match(/^#{1,4}\s*(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/);
+      if (h2) {
+        curDate = h2[1] + '-' + ('0' + h2[2]).slice(-2) + '-' + ('0' + h2[3]).slice(-2);
+        return;
+      }
+      if (/^#{1,4}\s+/.test(line)) {
+        out.push({
+          text: line.replace(/^#{1,4}\s+/, '').slice(0, 200),
+          date: curDate,
+          type: 'note'
+        });
+        return;
+      }
+      var cleaned = line.replace(/^[-*]\s+/, '').replace(/^>\s?/, '');
+      if (cleaned) out.push({
+        text: cleaned.slice(0, 200),
+        date: curDate,
+        type: 'note'
+      });
+    });
+    return out;
+  }
+
+  /** 导入落库：CSV → 任务（createTask），MD → 日志（addMemo，可回填历史日期） */
+  function importDataFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var text = String(reader.result || '');
+        if (dataImportKind === 'csv') {
+          var rows = parseTasksCsv(text);
+          if (!rows.length) {
+            toast('没有解析到有效任务行');
+            return;
+          }
+          rows.forEach(function (r) {
+            createTask(r);
+          });
+          if (typeof checkAutoAchievements === 'function') checkAutoAchievements();
+          toast('已导入 ' + rows.length + ' 个任务');
+        } else {
+          var entries = parseDiaryMarkdown(text);
+          if (!entries.length) {
+            toast('没有解析到有效日记内容');
+            return;
+          }
+          entries.forEach(function (en) {
+            var memo = addMemo(en.text, en.type);
+            if (memo && en.date && _typeof(memo) === 'object') {
+              // addMemo 用当前时间戳；日记是历史内容 → 用解析日期重建 createdAt（本地正午，避免时区翻日）
+              memo.createdAt = en.date + 'T12:00:00.000Z';
+            }
+          });
+          saveState();
+          if (typeof checkAutoAchievements === 'function') checkAutoAchievements();
+          toast('已导入 ' + entries.length + ' 条日记');
+        }
+        refreshCurrentPage();
+      } catch (e) {
+        toast('导入失败：文件内容无法解析');
+      }
+    };
+    reader.onerror = function () {
+      toast('读取文件失败');
+    };
+    reader.readAsText(file, 'utf-8');
   }
 
   /* ---- 导出公共 API 到 EO 命名空间并同步到全局（兼容旧引用 / 测试桩） ---- */
@@ -16989,6 +18151,107 @@ var backpackTab = 'all';
     pushDueNotifications();
   }
 
+  /* ==================== v1.0.5：系统通知中继 / 快捷键 / 灵感接力 ==================== */
+
+  /** 事件总线订阅：成就解锁 / 同步完成 → 系统通知（权限未授予则静默） */
+  function wireSystemNotifyRelay() {
+    try {
+      if (typeof EarthBus === 'undefined' || !EarthBus || typeof EarthBus.on !== 'function') return;
+      if (window.__eoNotifyRelayWired) return; // 幂等：startMainApp 可能被多次进入（切换账号）
+      window.__eoNotifyRelayWired = true;
+      EarthBus.on('eo:system-notify', function (payload) {
+        try {
+          if (!notifyEnabled()) return;
+          if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+          new Notification(String(payload && payload.title || '地球Online'), {
+            body: String(payload && payload.body || '')
+          });
+        } catch (e) {/* 静默 */}
+      });
+    } catch (e) {/* 静默 */}
+  }
+
+  /**
+   * 键盘快捷键（与 Windows 端同一份快捷键表：新建任务 / 切换模块）。
+   * 浏览器保留 Ctrl+N（新窗口）与 Ctrl+1~8（切标签页），无法拦截——Web 端以 Alt 为主触发，
+   * 同时尝试响应 Ctrl/Meta 组合（部分环境 / PWA 独立窗口下可用）。
+   */
+  function wireKeyboardShortcuts() {
+    try {
+      if (typeof document === 'undefined' || !document.addEventListener) return;
+      if (window.__eoKeysWired) return;
+      window.__eoKeysWired = true;
+      document.addEventListener('keydown', function (e) {
+        var mod = e.altKey || e.ctrlKey || e.metaKey;
+        if (!mod) return;
+        var k = String(e.key || '').toLowerCase();
+        // Alt/Ctrl+N → 新建任务
+        if (k === 'n') {
+          try {
+            e.preventDefault();
+            if (currentPage !== 'tasks') navigate('tasks');
+            if (typeof EO !== 'undefined' && EO && typeof EO.openTaskModal === 'function') EO.openTaskModal(null, null);
+          } catch (err) {/* 静默 */}
+          return;
+        }
+        // Alt/Ctrl+1~8 → 切换到第 1~8 个模块（PAGES 顺序；第 9 个「设置」保留浏览器冲突最小化不做绑定）
+        if (/^[1-8]$/.test(k) && (e.altKey || e.ctrlKey || e.metaKey)) {
+          var target = PAGES[Number(k) - 1];
+          if (target) {
+            try {
+              e.preventDefault();
+              navigate(target.key);
+            } catch (err) {/* 静默 */}
+          }
+        }
+      });
+    } catch (e) {/* 静默 */}
+  }
+
+  /** 跨端灵感接力：webdav 恢复时检测到的云端新灵感（sessionStorage）→ 顶部横幅一键转待办 */
+  function showNewIdeasBanner() {
+    try {
+      var ideas = null;
+      try {
+        ideas = JSON.parse(sessionStorage.getItem('eo_new_ideas') || 'null');
+      } catch (e) {
+        ideas = null;
+      }
+      if (!Array.isArray(ideas) || !ideas.length) return;
+      var bar = document.createElement('div');
+      bar.id = 'ideasBanner';
+      bar.className = 'ideas-banner';
+      bar.innerHTML = '<span class="ib-text">💡 检测到 ' + ideas.length + ' 条来自其他设备的新灵感，转为待办？</span>' + '<button class="ib-btn" id="ideasToTask">转为待办</button>' + '<button class="ib-btn ib-btn-ghost" id="ideasIgnore">忽略</button>';
+      document.body.appendChild(bar);
+      var cleanup = function cleanup() {
+        try {
+          sessionStorage.removeItem('eo_new_ideas');
+        } catch (e) {}
+        try {
+          bar.remove();
+        } catch (e2) {}
+      };
+      bar.querySelector('#ideasToTask').addEventListener('click', function () {
+        var n = 0;
+        ideas.forEach(function (it) {
+          if (!it || !it.text) return;
+          if (typeof EO !== 'undefined' && EO && typeof EO.createTask === 'function') {
+            EO.createTask({
+              title: String(it.text).slice(0, 120),
+              category: 'todo'
+            });
+            n++;
+          }
+        });
+        cleanup();
+        try {
+          if (typeof toast === 'function') toast('已将 ' + n + ' 条灵感转为待办');
+        } catch (e) {}
+      });
+      bar.querySelector('#ideasIgnore').addEventListener('click', cleanup);
+    } catch (e) {/* 静默 */}
+  }
+
   /* ==================== 离线运行能力 / PWA（T05） ==================== */
 
   /**
@@ -17278,6 +18541,11 @@ var backpackTab = 'all';
               }
               window.__eoDueTimer = setInterval(checkDueNotifications, 30 * 60 * 1000);
             }
+
+            // 1.7 v1.0.5：系统通知中继（成就解锁 / 同步完成）+ 键盘快捷键 + 跨端灵感接力横幅
+            wireSystemNotifyRelay();
+            wireKeyboardShortcuts();
+            showNewIdeasBanner();
 
             // 2. 成就系统：补齐自动成就条目，检测已达成的成就
             ensureAutoAchievements();

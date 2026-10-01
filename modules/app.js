@@ -439,6 +439,94 @@ function checkDueNotifications() {
   pushDueNotifications();
 }
 
+/* ==================== v1.0.5：系统通知中继 / 快捷键 / 灵感接力 ==================== */
+
+/** 事件总线订阅：成就解锁 / 同步完成 → 系统通知（权限未授予则静默） */
+function wireSystemNotifyRelay() {
+  try {
+    if (typeof EarthBus === 'undefined' || !EarthBus || typeof EarthBus.on !== 'function') return;
+    if (window.__eoNotifyRelayWired) return; // 幂等：startMainApp 可能被多次进入（切换账号）
+    window.__eoNotifyRelayWired = true;
+    EarthBus.on('eo:system-notify', function (payload) {
+      try {
+        if (!notifyEnabled()) return;
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        new Notification(String((payload && payload.title) || '地球Online'), {
+          body: String((payload && payload.body) || ''),
+        });
+      } catch (e) { /* 静默 */ }
+    });
+  } catch (e) { /* 静默 */ }
+}
+
+/**
+ * 键盘快捷键（与 Windows 端同一份快捷键表：新建任务 / 切换模块）。
+ * 浏览器保留 Ctrl+N（新窗口）与 Ctrl+1~8（切标签页），无法拦截——Web 端以 Alt 为主触发，
+ * 同时尝试响应 Ctrl/Meta 组合（部分环境 / PWA 独立窗口下可用）。
+ */
+function wireKeyboardShortcuts() {
+  try {
+    if (typeof document === 'undefined' || !document.addEventListener) return;
+    if (window.__eoKeysWired) return;
+    window.__eoKeysWired = true;
+    document.addEventListener('keydown', function (e) {
+      const mod = e.altKey || e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const k = String(e.key || '').toLowerCase();
+      // Alt/Ctrl+N → 新建任务
+      if (k === 'n') {
+        try {
+          e.preventDefault();
+          if (currentPage !== 'tasks') navigate('tasks');
+          if (typeof EO !== 'undefined' && EO && typeof EO.openTaskModal === 'function') EO.openTaskModal(null, null);
+        } catch (err) { /* 静默 */ }
+        return;
+      }
+      // Alt/Ctrl+1~8 → 切换到第 1~8 个模块（PAGES 顺序；第 9 个「设置」保留浏览器冲突最小化不做绑定）
+      if (/^[1-8]$/.test(k) && (e.altKey || e.ctrlKey || e.metaKey)) {
+        const target = PAGES[Number(k) - 1];
+        if (target) {
+          try {
+            e.preventDefault();
+            navigate(target.key);
+          } catch (err) { /* 静默 */ }
+        }
+      }
+    });
+  } catch (e) { /* 静默 */ }
+}
+
+/** 跨端灵感接力：webdav 恢复时检测到的云端新灵感（sessionStorage）→ 顶部横幅一键转待办 */
+function showNewIdeasBanner() {
+  try {
+    let ideas = null;
+    try { ideas = JSON.parse(sessionStorage.getItem('eo_new_ideas') || 'null'); } catch (e) { ideas = null; }
+    if (!Array.isArray(ideas) || !ideas.length) return;
+    const bar = document.createElement('div');
+    bar.id = 'ideasBanner';
+    bar.className = 'ideas-banner';
+    bar.innerHTML =
+      '<span class="ib-text">💡 检测到 ' + ideas.length + ' 条来自其他设备的新灵感，转为待办？</span>' +
+      '<button class="ib-btn" id="ideasToTask">转为待办</button>' +
+      '<button class="ib-btn ib-btn-ghost" id="ideasIgnore">忽略</button>';
+    document.body.appendChild(bar);
+    const cleanup = function () { try { sessionStorage.removeItem('eo_new_ideas'); } catch (e) {} try { bar.remove(); } catch (e2) {} };
+    bar.querySelector('#ideasToTask').addEventListener('click', function () {
+      let n = 0;
+      ideas.forEach(function (it) {
+        if (!it || !it.text) return;
+        if (typeof EO !== 'undefined' && EO && typeof EO.createTask === 'function') {
+          EO.createTask({ title: String(it.text).slice(0, 120), category: 'todo' });
+          n++;
+        }
+      });
+      cleanup();
+      try { if (typeof toast === 'function') toast('已将 ' + n + ' 条灵感转为待办'); } catch (e) {}
+    });
+    bar.querySelector('#ideasIgnore').addEventListener('click', cleanup);
+  } catch (e) { /* 静默 */ }
+}
+
 /* ==================== 离线运行能力 / PWA（T05） ==================== */
 
 /**
@@ -674,6 +762,11 @@ async function startMainApp() {
     if (window.__eoDueTimer) { try { clearInterval(window.__eoDueTimer); } catch (e) {} }
     window.__eoDueTimer = setInterval(checkDueNotifications, 30 * 60 * 1000);
   }
+
+  // 1.7 v1.0.5：系统通知中继（成就解锁 / 同步完成）+ 键盘快捷键 + 跨端灵感接力横幅
+  wireSystemNotifyRelay();
+  wireKeyboardShortcuts();
+  showNewIdeasBanner();
 
   // 2. 成就系统：补齐自动成就条目，检测已达成的成就
   ensureAutoAchievements();

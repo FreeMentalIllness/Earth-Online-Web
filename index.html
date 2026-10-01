@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="地球Online">
   <title>地球Online · 人生记录</title>
-  <link rel="stylesheet" href="css/style.css?v=1.0.4-20261001-1340">
+  <link rel="stylesheet" href="css/style.css?v=1.0.5-20261001-1453">
   <!-- 应用图标：自绘（icons/ 目录），零外部依赖。
        PNG 声明在前、SVG 兜底 —— 多数打包器（含 Pakr）与 iOS 主屏只认 PNG，
        SVG 虽矢量清晰，在这些场景里会静默回落到系统默认图标，表现为「图标没生效」。
@@ -69,6 +69,7 @@
 
   <!-- v4：导入备份用的隐藏文件选择框（由「导入备份」按钮触发 click） -->
   <input type="file" id="backupFileInput" accept="application/json,.json" hidden>
+  <input type="file" id="dataFileInput" accept=".csv,.md,.markdown,.txt" hidden>
   <!-- v8：收藏附件选择框（由「选择文件」按钮触发 click，持久化挂载避免 WebView/iOS 无法弹窗）
        v15 批 C：扩展可上传类型 —— 图片/音乐/视频/PDF/文档/压缩包/exe/apk 等均可选 -->
   <input type="file" id="collectionFileInput" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.exe,.apk,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/zip,application/octet-stream" hidden>
@@ -99,24 +100,24 @@
   <script src="https://webapi.amap.com/maps?v=2.0&key=07672883965ec7a6f0948813c0a90915"></script>
 
   <!-- v15 解耦批：轻量事件总线（模块间解耦，先于 storage/data 加载） -->
-  <script src="modules/bus.js?v=1.0.4-20261001-1340"></script>
+  <script src="modules/bus.js?v=1.0.5-20261001-1453"></script>
 
   <!-- v16 ①：内置 localforage（离线优先，零外链）+ 存储层封装（EOStore / EarthIDB 别名） -->
-  <script src="vendor/localforage.min.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/storage.js?v=1.0.4-20261001-1340"></script>
+  <script src="vendor/localforage.min.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/storage.js?v=1.0.5-20261001-1453"></script>
 
   <!-- v16 ②：按功能拆分的独立模块（window.EO 命名空间，经典脚本顺序加载，守住 file:// 双击可用）。
        v1.0.4：每个本地资源追加 ?v= 缓存版本指纹（版本-构建时间戳），由 build_pakr.js 构建时自动写入，
        强制浏览器/CDN 在发版后拉取最新文件，根治旧缓存；禁止手改指纹值。 -->
-  <script src="modules/core.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/achievements.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/profile.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/collections.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/backup.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/webdav.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/stats.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/account.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/pages.js?v=1.0.4-20261001-1340"></script>
-  <script src="modules/app.js?v=1.0.4-20261001-1340"></script>
+  <script src="modules/core.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/achievements.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/profile.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/collections.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/backup.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/webdav.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/stats.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/account.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/pages.js?v=1.0.5-20261001-1453"></script>
+  <script src="modules/app.js?v=1.0.5-20261001-1453"></script>
 </body>
 </html>

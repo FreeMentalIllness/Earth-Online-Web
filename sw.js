@@ -24,10 +24,10 @@
  */
 
 /** 应用版本：与 modules/core.js 的 APP_INFO.version 对齐，发布时一并 bump */
-var ASSET_VER = '1.0.4';
+var ASSET_VER = '1.0.5';
 
 /** 部署戳：每次发布改这个值（例如 YYYYMMDDHHMM），强制 SW 内容变化、触发自动更新 */
-var BUILD = '20261001-1340';
+var BUILD = '20261001-1453';
 
 /** 缓存名 = 版本 + 部署戳；改名即全量刷新（旧缓存由 activate 清理） */
 var CACHE = 'earth-online-sw-' + ASSET_VER + '-' + BUILD;
